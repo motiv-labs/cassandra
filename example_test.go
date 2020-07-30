@@ -22,10 +22,10 @@ func Example() {
 		fmt.Println(err)
 	}
 
-	defer sessionHolder.CloseConnection()
+	defer sessionHolder.CloseSession()
 
 	// Getting the cassandra session
-	session := sessionHolder.GetConnection()
+	session := sessionHolder.GetSession()
 	// And have fun with the session, example:
 	session.Query("SELECT * FROM my_table")
 }
@@ -41,10 +41,10 @@ func ExampleNew() {
 		fmt.Println(err)
 	}
 
-	defer sessionHolder.CloseConnection()
+	defer sessionHolder.CloseSession()
 
 	// Getting the cassandra session
-	session := sessionHolder.GetConnection()
+	session := sessionHolder.GetSession()
 	// And have fun with the session, example:
 	session.Query("SELECT * FROM my_table")
 }

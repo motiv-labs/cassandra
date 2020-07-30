@@ -50,7 +50,7 @@ func Initialize(clusterHostName, systemKeyspace, appKeyspace string, connectionT
 		log.Fatalf("error connecting to Cassandra db: %v", err)
 		panic(err)
 	}
-	defer connectionHolder.CloseConnection()
+	defer connectionHolder.CloseSession()
 
 	log.Debug("Setting up cassandra keyspace")
 	err = createAppKeyspaceIfRequired(clusterHostName, systemKeyspace, appKeyspace)
@@ -75,13 +75,13 @@ func (i connInitializer) StartConnection() (Holder, error) {
 	return connectionHolder, nil
 }
 
-// 	GetConnection returns the stored cassandra session
-func (holder sessionHolder) GetConnection() *gocql.Session {
+// GetSession returns the stored cassandra session
+func (holder sessionHolder) GetSession() *gocql.Session {
 	return holder.session
 }
 
-// CloseConnection closes the cassandra session
-func (holder sessionHolder) CloseConnection() {
+// CloseSession closes the cassandra session
+func (holder sessionHolder) CloseSession() {
 	holder.session.Close()
 }
 
