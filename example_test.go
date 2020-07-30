@@ -13,11 +13,11 @@ func Example() {
 
 	// Now that Cassandra is initialized we can start new connections
 
-	// Getting a cassandra session initializer
+	// Getting a cassandra connection initializer
 	sessionInitializer := New("db", "application_keyspace")
 
-	// Starting a new cassandra connection
-	sessionHolder, err := sessionInitializer.StartConnection()
+	// Starting a new cassandra session
+	sessionHolder, err := sessionInitializer.NewSession()
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -32,11 +32,11 @@ func Example() {
 
 func ExampleNew() {
 
-	// Getting a cassandra session initializer
+	// Getting a cassandra connection initializer
 	sessionInitializer := New("db", "application_keyspace")
 
-	// Starting a new cassandra connection
-	sessionHolder, err := sessionInitializer.StartConnection()
+	// Starting a new cassandra session
+	sessionHolder, err := sessionInitializer.NewSession()
 	if err != nil {
 		fmt.Println(err)
 	}

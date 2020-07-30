@@ -62,9 +62,11 @@ func Initialize(clusterHostName, systemKeyspace, appKeyspace string, connectionT
 	log.Info("Cassandra keyspace has been set up")
 }
 
-// StartConnection starts a new cassandra session for the given keyspace
+// NewSession starts a new cassandra session for the given keyspace
+// NOTE: It is responsibility of the caller to close this new session.
+//
 // Returns a connection Holder for the session, or an error if can't start the session
-func (i connInitializer) StartConnection() (Holder, error) {
+func (i connInitializer) NewSession() (Holder, error) {
 	session, err := newKeyspaceSession(i.clusterHostName, i.keyspace, 600*time.Millisecond)
 	if err != nil {
 		log.Errorf("error starting Cassandra session for the cluster hostname: %s and keyspace: %s - %v",
@@ -225,11 +227,11 @@ func getKeyspaceNameFromUseStmt(stmt string) (string, bool) {
 //
 // Params:
 //	 timeout: timeout to get the connection
-//	 connectionInitializer : initializer to start the connection
+//	 initializer : initializer to start the session
 //	 connectionHost : name of host for the connection
 //
 // Returns a ConnectionHolder to store the connection, or an error if the timeout was reached
-func loop(timeout time.Duration, connectionInitializer Initializer, connectionHost string) (Holder, error) {
+func loop(timeout time.Duration, initializer Initializer, connectionHost string) (Holder, error) {
 
 	log.Debugf("Connection loop to connect to %s, timeout to use: %s", connectionHost, timeout)
 	ticker := time.NewTicker(1 * time.Second)
@@ -243,7 +245,7 @@ func loop(timeout time.Duration, connectionInitializer Initializer, connectionHo
 
 		case <-ticker.C:
 			log.Infof("Trying to connect to: %s", connectionHost)
-			connectionHolder, err := connectionInitializer.StartConnection()
+			connectionHolder, err := initializer.NewSession()
 			if err == nil {
 				log.Infof("Successful connection to: %s", connectionHost)
 				return connectionHolder, nil
