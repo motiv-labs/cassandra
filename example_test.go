@@ -11,7 +11,7 @@ func Example() {
 	// Needs to be called only on the app startup
 	Initialize("cluster_hostname", "system_keyspace", "application_keyspace", 120*time.Second)
 
-	// Now that Cassandra in initialized we can start new connections
+	// Now that Cassandra is initialized we can start new connections
 
 	// Getting a cassandra session initializer
 	sessionInitializer := New("db", "application_keyspace")
