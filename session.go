@@ -7,7 +7,7 @@ type Initializer interface {
 	NewSession() (Holder, error)
 }
 
-// Holder allows to store a close connections
+// Holder allows to store a close sessions
 type Holder interface {
 	GetSession() *gocql.Session
 	CloseSession()

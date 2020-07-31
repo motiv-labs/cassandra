@@ -15,8 +15,8 @@ import (
 // Schema file to create keyspace if required
 const schemaFile = "/usr/local/bin/schema.sql"
 
-// connInitializer is an initializer for a cassandra session
-type connInitializer struct {
+// sessionInitializer is an initializer for a cassandra session
+type sessionInitializer struct {
 	clusterHostName string
 	keyspace        string
 }
@@ -28,7 +28,7 @@ type sessionHolder struct {
 
 // New return a cassandra session Initializer
 func New(clusterHostName, keyspace string) Initializer {
-	return connInitializer{
+	return sessionInitializer{
 		clusterHostName: clusterHostName,
 		keyspace:        keyspace,
 	}
@@ -65,8 +65,8 @@ func Initialize(clusterHostName, systemKeyspace, appKeyspace string, connectionT
 // NewSession starts a new cassandra session for the given keyspace
 // NOTE: It is responsibility of the caller to close this new session.
 //
-// Returns a connection Holder for the session, or an error if can't start the session
-func (i connInitializer) NewSession() (Holder, error) {
+// Returns a session Holder for the session, or an error if can't start the session
+func (i sessionInitializer) NewSession() (Holder, error) {
 	session, err := newKeyspaceSession(i.clusterHostName, i.keyspace, 600*time.Millisecond)
 	if err != nil {
 		log.Errorf("error starting Cassandra session for the cluster hostname: %s and keyspace: %s - %v",
@@ -230,7 +230,7 @@ func getKeyspaceNameFromUseStmt(stmt string) (string, bool) {
 //	 initializer : initializer to start the session
 //	 connectionHost : name of host for the connection
 //
-// Returns a ConnectionHolder to store the connection, or an error if the timeout was reached
+// Returns a session Holder to store the session, or an error if the timeout was reached
 func loop(timeout time.Duration, initializer Initializer, connectionHost string) (Holder, error) {
 
 	log.Debugf("Connection loop to connect to %s, timeout to use: %s", connectionHost, timeout)
