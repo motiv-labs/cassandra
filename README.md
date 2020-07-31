@@ -10,12 +10,12 @@ under the `/usr/local/bin/` folder (`/usr/local/bin/schema.sql`).
 ``` go
 // Cassandra initialization - initializes Cassandra keyspace and creates tables if required
 // Needs to be called only on the app startup
-Initialize("cluster_hostname", "system_keyspace", "application_keyspace", 120*time.Second)
+cassandra.Initialize("cluster_hostname", "system_keyspace", "application_keyspace", 120*time.Second)
 
 // Now that Cassandra is initialized we can start new connections
 
 // Getting a cassandra connection initializer
-sessionInitializer := New("db", "application_keyspace")
+sessionInitializer := cassandra.New("db", "application_keyspace")
 
 // Starting a new cassandra session
 sessionHolder, err := sessionInitializer.NewSession()
