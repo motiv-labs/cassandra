@@ -7,7 +7,7 @@ import (
 
 func Example() {
 
-	// First Cassandra initialization - initializes Cassandra keyspace and creates tables if required
+	// Cassandra initialization - initializes Cassandra keyspace and creates tables if required
 	// Needs to be called only on the app startup
 	Initialize("cluster_hostname", "system_keyspace", "application_keyspace", 120*time.Second)
 
