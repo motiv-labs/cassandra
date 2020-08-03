@@ -20,7 +20,8 @@ sessionInitializer := cassandra.New("db", "application_keyspace")
 // Starting a new cassandra session
 sessionHolder, err := sessionInitializer.NewSession()
 if err != nil {
-    fmt.Println(err)
+    log.Errorf("error initializing cassandra session - %v", err)
+    return
 }
 
 defer sessionHolder.CloseSession()

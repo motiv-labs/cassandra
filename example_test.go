@@ -1,7 +1,7 @@
 package cassandra
 
 import (
-	"fmt"
+	log "github.com/motiv-labs/logwrapper"
 	"time"
 )
 
@@ -19,7 +19,8 @@ func Example() {
 	// Starting a new cassandra session
 	sessionHolder, err := sessionInitializer.NewSession()
 	if err != nil {
-		fmt.Println(err)
+		log.Errorf("error initializing cassandra session - %v", err)
+		return
 	}
 
 	defer sessionHolder.CloseSession()
@@ -38,7 +39,8 @@ func ExampleNew() {
 	// Starting a new cassandra session
 	sessionHolder, err := sessionInitializer.NewSession()
 	if err != nil {
-		fmt.Println(err)
+		log.Errorf("error initializing cassandra session - %v", err)
+		return
 	}
 
 	defer sessionHolder.CloseSession()
