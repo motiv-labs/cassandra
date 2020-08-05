@@ -2,8 +2,11 @@
 
 Cassandra module to expose simple ways to interact with a Cassandra database.
 This module allows connecting with a Cassandra database for specific keyspaces and hosts, also allows creating new 
-keyspaces and tables if required, for that porpuse is required to have a `schema.sql` file with the stataments to run 
+keyspaces and tables if required, for that porpuse is required to have a `schema.sql` file with the statements to run 
 under the `/usr/local/bin/` folder (`/usr/local/bin/schema.sql`).
+
+### Overriding schema location
+The schema location can be override using the `CASSANDRA_SCHEMA_PATH` and `CASSANDRA_SCHEMA_FILE_NAME` environment variables.
 
 ## Example of use:
 

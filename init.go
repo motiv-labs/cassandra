@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"os"
+	"path"
 	"regexp"
 	"strings"
 	"time"
@@ -13,7 +15,29 @@ import (
 )
 
 // Schema file to create keyspace if required
-const schemaFile = "/usr/local/bin/schema.sql"
+const (
+	schemaDefaultPath     = "/usr/local/bin"
+	schemaDefaultFileName = "schema.sql"
+
+	envCassandraSchemaPath     = "CASSANDRA_SCHEMA_PATH"
+	envCassandraSchemaFileName = "CASSANDRA_SCHEMA_FILE_NAME"
+)
+
+var schemaPath = "/usr/local/bin"
+var schemaFileName = "schema.sql"
+
+// Package level initialization.
+//
+// init functions are automatically executed when the programs starts
+func init() {
+
+	// reading and setting up environment variables
+	schemaPath = getenv(envCassandraSchemaPath, schemaDefaultPath)
+	schemaFileName = getenv(envCassandraSchemaFileName, schemaDefaultFileName)
+
+	log.Debugf("Got schema path: %s", schemaPath)
+	log.Debugf("Got schema file name: %s", schemaFileName)
+}
 
 // sessionInitializer is an initializer for a cassandra session
 type sessionInitializer struct {
@@ -118,7 +142,8 @@ func createAppKeyspaceIfRequired(clusterHostName, systemKeyspace, appKeyspace st
 
 	log.Debugf("Creating new keyspace if required: %s", appKeyspace)
 
-	stmtList, err := getStmtsFromFile(schemaFile)
+	// Getting the schema file if exist
+	stmtList, err := getStmtsFromFile(path.Join(schemaPath, schemaFileName))
 	if err != nil {
 		return err
 	}
@@ -254,4 +279,26 @@ func loop(timeout time.Duration, initializer Initializer, connectionHost string)
 		}
 	}
 
+}
+
+// getenv get a string value from an environment variable
+// or return the given default value if the environment variable is not set
+//
+// Params:
+//  envVariable : environment variable
+//  defaultValue : value to return if environment variable is not set
+//
+// Returns the string value for the specified variable
+func getenv(envVariable string, defaultValue string) string {
+
+	log.Debugf("Setting value for: %s", envVariable)
+	returnValue := defaultValue
+	log.Debugf("Default value for %s : %s", envVariable, defaultValue)
+	envStr := os.Getenv(envVariable)
+	if envStr != "" {
+		returnValue = envStr
+		log.Debugf("Init value for %s set to: %s", envVariable, envStr)
+	}
+
+	return returnValue
 }
