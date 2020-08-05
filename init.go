@@ -124,15 +124,6 @@ func newKeyspaceSession(clusterHostName, keyspace string, clusterTimeout time.Du
 // createAppKeyspaceIfRequired creates the keyspace for the app if it doesn't exist
 func createAppKeyspaceIfRequired(clusterHostName, systemKeyspace, appKeyspace string) error {
 
-	// Getting the schema file if exist
-	stmtList, err := getStmtsFromFile(path.Join(schemaPath, schemaFileName))
-	if err != nil {
-		return err
-	}
-	if stmtList == nil { // Didn't fail but returned nil, probably the file does not exist
-		return nil
-	}
-
 	log.Info("about to create a session with a 5 minute timeout to allow for all schema creation")
 	session, err := newKeyspaceSession(clusterHostName, systemKeyspace, 5*time.Minute)
 	if err != nil {
@@ -150,6 +141,12 @@ func createAppKeyspaceIfRequired(clusterHostName, systemKeyspace, appKeyspace st
 	}()
 
 	log.Debugf("Creating new keyspace if required: %s", appKeyspace)
+
+	// Getting the schema file if exist
+	stmtList, err := getStmtsFromFile(path.Join(schemaPath, schemaFileName))
+	if err != nil {
+		return err
+	}
 
 	for _, stmt := range stmtList {
 		log.Debugf("Executing statement: %s", stmt)
