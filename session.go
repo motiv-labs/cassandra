@@ -32,5 +32,5 @@ func (s SessionRetry) Query(stmt string, values ...interface{}) *gocql.Query {
 
 func (s SessionRetry) Close() {
 	log.Info("running SessionRetry Close() method")
-	s.Close()
+	s.GoCqlSession.Close()
 }
