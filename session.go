@@ -27,7 +27,7 @@ type SessionRetry struct {
 
 func (s SessionRetry) Query(stmt string, values ...interface{}) *gocql.Query {
 	log.Info("running SessionRetry Query() method")
-	return s.GoCqlSession.Query(stmt, values)
+	return s.GoCqlSession.Query(stmt, values...)
 }
 
 func (s SessionRetry) Close() {
