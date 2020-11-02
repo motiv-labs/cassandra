@@ -97,7 +97,7 @@ func (i sessionInitializer) NewSession() (Holder, error) {
 			i.clusterHostName, i.keyspace, err)
 		return nil, err
 	}
-	sessionRetry := SessionRetry{session}
+	sessionRetry := sessionRetry{session}
 	connectionHolder := sessionHolder{sessionRetry}
 	return connectionHolder, nil
 }
