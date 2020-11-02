@@ -47,7 +47,7 @@ type sessionInitializer struct {
 
 // sessionHolder stores a cassandra session
 type sessionHolder struct {
-	session *gocql.Session
+	session SessionInterface
 }
 
 // New return a cassandra session Initializer
@@ -97,12 +97,13 @@ func (i sessionInitializer) NewSession() (Holder, error) {
 			i.clusterHostName, i.keyspace, err)
 		return nil, err
 	}
-	connectionHolder := sessionHolder{session}
+	sessionRetry := SessionRetry{session}
+	connectionHolder := sessionHolder{sessionRetry}
 	return connectionHolder, nil
 }
 
 // GetSession returns the stored cassandra session
-func (holder sessionHolder) GetSession() *gocql.Session {
+func (holder sessionHolder) GetSession() SessionInterface {
 	return holder.session
 }
 
