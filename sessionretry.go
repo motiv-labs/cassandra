@@ -3,6 +3,7 @@ package cassandra
 import (
 	"github.com/gocql/gocql"
 	log "github.com/motiv-labs/logwrapper"
+	"time"
 )
 
 // sessionRetry is an implementation of SessionInterface
@@ -11,11 +12,18 @@ type sessionRetry struct {
 }
 
 func (s sessionRetry) Query(stmt string, values ...interface{}) *gocql.Query {
-	log.Info("running SessionRetry Query() method")
-	return s.goCqlSession.Query(stmt, values...)
+	log.Debug("running SessionRetry Query() method")
+
+	sp := &gocql.SimpleSpeculativeExecution{
+		NumAttempts:  3,
+		TimeoutDelay: 1 * time.Second,
+	}
+
+	return s.goCqlSession.Query(stmt, values...).SetSpeculativeExecutionPolicy(sp).Idempotent(true)
 }
 
 func (s sessionRetry) Close() {
-	log.Info("running SessionRetry Close() method")
+	log.Debug("running SessionRetry Close() method")
+
 	s.goCqlSession.Close()
 }
