@@ -15,3 +15,15 @@ func (q queryRetry) Exec() error {
 
 	return q.goCqlQuery.Exec()
 }
+
+func (q queryRetry) Scan(dest ...interface{}) error {
+	log.Info("running queryRetry Scan() method")
+
+	return q.goCqlQuery.Scan(dest...)
+}
+
+func (q queryRetry) Iter() *gocql.Iter {
+	log.Info("running queryRetry Iter() method")
+
+	return q.goCqlQuery.Iter()
+}

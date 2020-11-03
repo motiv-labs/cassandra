@@ -1,5 +1,7 @@
 package cassandra
 
+import "github.com/gocql/gocql"
+
 // Initializer is a common interface for functionality to start a new session
 type Initializer interface {
 	NewSession() (Holder, error)
@@ -19,4 +21,6 @@ type SessionInterface interface {
 
 type QueryInterface interface {
 	Exec() error
+	Scan(dest ...interface{}) error
+	Iter() *gocql.Iter
 }
