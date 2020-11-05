@@ -8,6 +8,14 @@ under the `/usr/local/bin/` folder (`/usr/local/bin/schema.sql`).
 ### Overriding schema location
 The schema location can be override using the `CASSANDRA_SCHEMA_PATH` and `CASSANDRA_SCHEMA_FILE_NAME` environment variables.
 
+### Retries / Attempt
+Cassandra module will handle errors internally and will retry the same call that failed for several times, while sleeping before the next attempt.
+
+### Overriding Retries / Attempt
+`CASSANDRA_RETRY_ATTEMPTS` 3 by default
+
+`CASSANDRA_SECONDS_SLEEP` 1 by default 
+
 ## Example of use:
 
 ``` go
