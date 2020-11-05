@@ -4,15 +4,19 @@ import (
 	"github.com/gocql/gocql"
 	log "github.com/motiv-labs/logwrapper"
 	"strconv"
+	"time"
 )
 
 const (
-	defaultCassandraRetryAttempts = "3"
+	defaultCassandraRetryAttempts  = "3"
+	defaultCassandraSecondsToSleep = "1"
 
-	envCassandraAttempts = "CASSANDRA_RETRY_ATTEMPTS"
+	envCassandraAttempts       = "CASSANDRA_RETRY_ATTEMPTS"
+	envCassandraSecondsToSleep = "CASSANDRA_SECONDS_SLEEP"
 )
 
 var cassandraRetryAttempts = 3
+var cassandraSecondsToSleep = 1
 
 // Package level initialization.
 //
@@ -25,7 +29,15 @@ func init() {
 		cassandraRetryAttempts = 3
 	}
 
+	cassandraSecondsToSleep, err := strconv.Atoi(getenv(envCassandraSecondsToSleep, defaultCassandraSecondsToSleep))
+	if err != nil {
+		log.Errorf("error trying to get CASSANDRA_SECONDS_SLEEP value: %s",
+			getenv(envCassandraSecondsToSleep, defaultCassandraSecondsToSleep))
+		cassandraSecondsToSleep = 1
+	}
+
 	log.Debugf("got cassandraRetryAttempts: %s", cassandraRetryAttempts)
+	log.Debugf("got cassandraSecondsToSleep: %s", cassandraSecondsToSleep)
 }
 
 // queryRetry is an implementation of QueryInterface
@@ -37,16 +49,19 @@ type queryRetry struct {
 func (q queryRetry) Exec() error {
 	log.Debug("running queryRetry Exec() method")
 
-	attempts := 1
-	retries := cassandraRetryAttempts
+	retryAttempts := cassandraRetryAttempts
+	secondsToSleep := cassandraSecondsToSleep
 
 	var err error
 
-	for attempts <= retries {
+	attempts := 1
+	for attempts <= retryAttempts {
 		//we will try to run the method several times until attempts is met
 		err = q.goCqlQuery.Exec()
 		if err != nil {
-			log.Warnf("error when running Exec(): %v, attempt: %d / %d", err, attempts, retries)
+			log.Warnf("error when running Exec(): %v, attempt: %d / %d", err, attempts, retryAttempts)
+			log.Warnf("sleeping for %d second", secondsToSleep)
+			time.Sleep(time.Duration(secondsToSleep) * time.Second)
 		} else {
 			// in case the error is nil, we stop and return
 			return err
@@ -62,16 +77,19 @@ func (q queryRetry) Exec() error {
 func (q queryRetry) Scan(dest ...interface{}) error {
 	log.Debug("running queryRetry Scan() method")
 
-	attempts := 1
 	retries := cassandraRetryAttempts
+	secondsToSleep := cassandraSecondsToSleep
 
 	var err error
 
+	attempts := 1
 	for attempts <= retries {
 		//we will try to run the method several times until attempts is met
 		err = q.goCqlQuery.Scan(dest...)
 		if err != nil {
 			log.Warnf("error when running Scan(): %v, attempt: %d / %d", err, attempts, retries)
+			log.Warnf("sleeping for %d second", secondsToSleep)
+			time.Sleep(time.Duration(secondsToSleep) * time.Second)
 		} else {
 			// in case the error is nil, we stop and return
 			return err
