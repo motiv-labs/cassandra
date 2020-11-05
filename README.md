@@ -10,6 +10,14 @@ The schema location can be override using the `CASSANDRA_SCHEMA_PATH` and `CASSA
 
 ### Retries / Attempt
 Cassandra module will handle errors internally and will retry the same call that failed for several times, while sleeping before the next attempt.
+We have implemented a retry attempt approach in place + incremental approach used. For example: 
+
+If you have this
+```
+CASSANDRA_RETRY_ATTEMPTS=3
+CASSANDRA_SECONDS_SLEEP_INCREMENT=1
+```
+First time it will wait 1 second, second time 2 seconds, third time 3 seconds, then fail... 
 
 ### Overriding Retries / Attempt
 `CASSANDRA_RETRY_ATTEMPTS` 3 by default
