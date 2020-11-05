@@ -48,5 +48,5 @@ func ExampleNew() {
 	// Getting the cassandra session
 	session := sessionHolder.GetSession()
 	// And have fun with the session, example:
-	session.Query("SELECT * FROM my_table")
+	session.Query("SELECT * FROM my_table").Exec()
 }

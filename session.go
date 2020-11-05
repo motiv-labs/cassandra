@@ -9,6 +9,18 @@ type Initializer interface {
 
 // Holder allows to store a close sessions
 type Holder interface {
-	GetSession() *gocql.Session
+	GetSession() SessionInterface
 	CloseSession()
+}
+
+// SessionInterface is an interface to wrap gocql methods used in Motiv
+type SessionInterface interface {
+	Query(stmt string, values ...interface{}) QueryInterface
+	Close()
+}
+
+type QueryInterface interface {
+	Exec() error
+	Scan(dest ...interface{}) error
+	Iter() *gocql.Iter
 }
