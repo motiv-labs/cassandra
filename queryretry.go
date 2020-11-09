@@ -36,8 +36,8 @@ func init() {
 		cassandraSecondsToSleepIncrement = 1
 	}
 
-	log.Debugf("got cassandraRetryAttempts: %s", cassandraRetryAttempts)
-	log.Debugf("got cassandraSecondsToSleepIncrement: %s", cassandraSecondsToSleep)
+	log.Debugf("got cassandraRetryAttempts: %d", cassandraRetryAttempts)
+	log.Debugf("got cassandraSecondsToSleepIncrement: %d", cassandraSecondsToSleep)
 }
 
 // queryRetry is an implementation of QueryInterface
