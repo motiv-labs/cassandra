@@ -18,7 +18,7 @@ type Holder interface {
 
 // SessionInterface is an interface to wrap gocql methods used in Motiv
 type SessionInterface interface {
-	Query(stmt string, parentSpan opentracing.Span, values ...interface{}) QueryInterface
+	Query(parentSpan opentracing.Span, stmt string, values ...interface{}) QueryInterface
 	Close(parentSpan opentracing.Span)
 }
 

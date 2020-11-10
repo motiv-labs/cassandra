@@ -12,7 +12,7 @@ type sessionRetry struct {
 }
 
 // Query wrapper to be able to return our own QueryInterface
-func (s sessionRetry) Query(stmt string, parentSpan opentracing.Span, values ...interface{}) QueryInterface {
+func (s sessionRetry) Query(parentSpan opentracing.Span, stmt string, values ...interface{}) QueryInterface {
 	span := opentracing.StartSpan("Query", opentracing.ChildOf(parentSpan.Context()))
 	defer span.Finish()
 	span.SetTag("Module", "cassandra")

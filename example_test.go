@@ -38,7 +38,7 @@ func Example() {
 	// Getting the cassandra session
 	session := sessionHolder.GetSession(span)
 	// And have fun with the session, example:
-	session.Query("SELECT * FROM my_table", span)
+	session.Query(span, "SELECT * FROM my_table")
 }
 
 func ExampleNew() {
@@ -59,5 +59,5 @@ func ExampleNew() {
 	// Getting the cassandra session
 	session := sessionHolder.GetSession(span)
 	// And have fun with the session, example:
-	session.Query("SELECT * FROM my_table", span).Exec(span)
+	session.Query(span, "SELECT * FROM my_table").Exec(span)
 }
