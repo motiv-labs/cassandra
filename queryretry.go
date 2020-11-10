@@ -120,3 +120,17 @@ func (q queryRetry) Iter() *gocql.Iter {
 
 	return q.goCqlQuery.Iter()
 }
+
+// PageState just a wrapper to be able to call this method
+func (q queryRetry) PageState(state []byte) *gocql.Query {
+	log.Debug("running queryRetry PageState() method")
+
+	return q.goCqlQuery.PageState(state)
+}
+
+// PageSize just a wrapper to be able to call this method
+func (q queryRetry) PageSize(n int) *gocql.Query {
+	log.Debug("running queryRetry PageSize() method")
+
+	return q.goCqlQuery.PageSize(n)
+}
