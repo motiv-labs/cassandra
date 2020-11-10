@@ -139,7 +139,7 @@ func (holder sessionHolder) CloseSession(parentSpan opentracing.Span) {
 
 // newKeyspaceSession returns a new session for the given keyspace
 func newKeyspaceSession(clusterHostName, keyspace string, clusterTimeout time.Duration, parentSpan opentracing.Span) (*gocql.Session, error) {
-	span := opentracing.StartSpan("Initialize", opentracing.ChildOf(parentSpan.Context()))
+	span := opentracing.StartSpan("newKeyspaceSession", opentracing.ChildOf(parentSpan.Context()))
 	defer span.Finish()
 	span.SetTag("Module", "cassandra")
 	span.SetTag("Package", "cassandra")

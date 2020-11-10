@@ -136,3 +136,27 @@ func (q queryRetry) Iter(parentSpan opentracing.Span) *gocql.Iter {
 
 	return q.goCqlQuery.Iter()
 }
+
+// PageState just a wrapper to be able to call this method
+func (q queryRetry) PageState(state []byte, parentSpan opentracing.Span) *gocql.Query {
+	span := opentracing.StartSpan("PageState", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Interface", "queryRetry")
+
+	log.Debug("running queryRetry PageState() method")
+
+	return q.goCqlQuery.PageState(state)
+}
+
+// PageSize just a wrapper to be able to call this method
+func (q queryRetry) PageSize(n int, parentSpan opentracing.Span) *gocql.Query {
+	span := opentracing.StartSpan("PageSize", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Interface", "queryRetry")
+
+	log.Debug("running queryRetry PageSize() method")
+
+	return q.goCqlQuery.PageSize(n)
+}
