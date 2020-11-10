@@ -12,6 +12,7 @@ import (
 
 	"github.com/gocql/gocql"
 	log "github.com/motiv-labs/logwrapper"
+	"github.com/opentracing/opentracing-go"
 )
 
 // Schema file to create keyspace if required
@@ -51,7 +52,12 @@ type sessionHolder struct {
 }
 
 // New return a cassandra session Initializer
-func New(clusterHostName, keyspace string) Initializer {
+func New(clusterHostName, keyspace string, parentSpan opentracing.Span) Initializer {
+	span := opentracing.StartSpan("New", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Package", "cassandra")
+
 	return sessionInitializer{
 		clusterHostName: clusterHostName,
 		keyspace:        keyspace,
@@ -66,18 +72,22 @@ func New(clusterHostName, keyspace string) Initializer {
 //	systemKeyspace: System keyspace
 //	appKeyspace: Application keyspace
 //	connectionTimeout: timeout to get the connection
-func Initialize(clusterHostName, systemKeyspace, appKeyspace string, connectionTimeout time.Duration) {
+func Initialize(clusterHostName, systemKeyspace, appKeyspace string, connectionTimeout time.Duration, parentSpan opentracing.Span) {
+	span := opentracing.StartSpan("Initialize", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Package", "cassandra")
 
 	log.Debug("Setting up cassandra db")
-	connectionHolder, err := loop(connectionTimeout, New(clusterHostName, systemKeyspace), "cassandra-db")
+	connectionHolder, err := loop(connectionTimeout, New(clusterHostName, systemKeyspace, span), "cassandra-db", span)
 	if err != nil {
 		log.Fatalf("error connecting to Cassandra db: %v", err)
 		panic(err)
 	}
-	defer connectionHolder.CloseSession()
+	defer connectionHolder.CloseSession(span)
 
 	log.Debug("Setting up cassandra keyspace")
-	err = createAppKeyspaceIfRequired(clusterHostName, systemKeyspace, appKeyspace)
+	err = createAppKeyspaceIfRequired(clusterHostName, systemKeyspace, appKeyspace, span)
 	if err != nil {
 		log.Fatalf("error creating keyspace for Cassandra db: %v", err)
 		panic(err)
@@ -90,8 +100,13 @@ func Initialize(clusterHostName, systemKeyspace, appKeyspace string, connectionT
 // NOTE: It is responsibility of the caller to close this new session.
 //
 // Returns a session Holder for the session, or an error if can't start the session
-func (i sessionInitializer) NewSession() (Holder, error) {
-	session, err := newKeyspaceSession(i.clusterHostName, i.keyspace, 600*time.Millisecond)
+func (i sessionInitializer) NewSession(parentSpan opentracing.Span) (Holder, error) {
+	span := opentracing.StartSpan("NewSession", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Interface", "sessionInitializer")
+
+	session, err := newKeyspaceSession(i.clusterHostName, i.keyspace, 600*time.Millisecond, span)
 	if err != nil {
 		log.Errorf("error starting Cassandra session for the cluster hostname: %s and keyspace: %s - %v",
 			i.clusterHostName, i.keyspace, err)
@@ -103,17 +118,31 @@ func (i sessionInitializer) NewSession() (Holder, error) {
 }
 
 // GetSession returns the stored cassandra session
-func (holder sessionHolder) GetSession() SessionInterface {
+func (holder sessionHolder) GetSession(parentSpan opentracing.Span) SessionInterface {
+	span := opentracing.StartSpan("GetSession", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Interface", "sessionHolder")
+
 	return holder.session
 }
 
 // CloseSession closes the cassandra session
-func (holder sessionHolder) CloseSession() {
-	holder.session.Close()
+func (holder sessionHolder) CloseSession(parentSpan opentracing.Span) {
+	span := opentracing.StartSpan("CloseSession", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Interface", "sessionHolder")
+
+	holder.session.Close(span)
 }
 
 // newKeyspaceSession returns a new session for the given keyspace
-func newKeyspaceSession(clusterHostName, keyspace string, clusterTimeout time.Duration) (*gocql.Session, error) {
+func newKeyspaceSession(clusterHostName, keyspace string, clusterTimeout time.Duration, parentSpan opentracing.Span) (*gocql.Session, error) {
+	span := opentracing.StartSpan("Initialize", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Package", "cassandra")
 
 	log.Infof("Creating new cassandra session for cluster hostname: %s and keyspace: %s", clusterHostName, keyspace)
 	cluster := gocql.NewCluster(clusterHostName)
@@ -123,10 +152,14 @@ func newKeyspaceSession(clusterHostName, keyspace string, clusterTimeout time.Du
 }
 
 // createAppKeyspaceIfRequired creates the keyspace for the app if it doesn't exist
-func createAppKeyspaceIfRequired(clusterHostName, systemKeyspace, appKeyspace string) error {
+func createAppKeyspaceIfRequired(clusterHostName, systemKeyspace, appKeyspace string, parentSpan opentracing.Span) error {
+	span := opentracing.StartSpan("createAppKeyspaceIfRequired", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Package", "cassandra")
 
 	// Getting the schema file if exist
-	stmtList, err := getStmtsFromFile(path.Join(schemaPath, schemaFileName))
+	stmtList, err := getStmtsFromFile(path.Join(schemaPath, schemaFileName), span)
 	if err != nil {
 		return err
 	}
@@ -135,7 +168,7 @@ func createAppKeyspaceIfRequired(clusterHostName, systemKeyspace, appKeyspace st
 	}
 
 	log.Info("about to create a session with a 5 minute timeout to allow for all schema creation")
-	session, err := newKeyspaceSession(clusterHostName, systemKeyspace, 5*time.Minute)
+	session, err := newKeyspaceSession(clusterHostName, systemKeyspace, 5*time.Minute, span)
 	if err != nil {
 		return err
 	}
@@ -156,12 +189,12 @@ func createAppKeyspaceIfRequired(clusterHostName, systemKeyspace, appKeyspace st
 		log.Debugf("Executing statement: %s", stmt)
 
 		// New session for use statement
-		newKeyspace, isCaseSensitive := getKeyspaceNameFromUseStmt(stmt)
+		newKeyspace, isCaseSensitive := getKeyspaceNameFromUseStmt(stmt, span)
 		if newKeyspace != "" {
 			if (isCaseSensitive && newKeyspace != currentKeyspace) || (!isCaseSensitive &&
 				strings.ToLower(newKeyspace) != strings.ToLower(currentKeyspace)) {
 				log.Infof("about to create a session with a 5 minute timeout to set keyspace: %s", newKeyspace)
-				session, err = newKeyspaceSession(clusterHostName, newKeyspace, 5*time.Minute) //5 minutes
+				session, err = newKeyspaceSession(clusterHostName, newKeyspace, 5*time.Minute, span) //5 minutes
 				if err != nil {
 					return err
 				}
@@ -185,7 +218,11 @@ func createAppKeyspaceIfRequired(clusterHostName, systemKeyspace, appKeyspace st
 }
 
 // getStmtsFromFile extracts CQL statements from the file
-func getStmtsFromFile(fileName string) ([]string, error) {
+func getStmtsFromFile(fileName string, parentSpan opentracing.Span) ([]string, error) {
+	span := opentracing.StartSpan("getStmtsFromFile", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Package", "cassandra")
 
 	// Verify first if the file exist
 	if _, err := os.Stat(fileName); err != nil {
@@ -211,10 +248,10 @@ func getStmtsFromFile(fileName string) ([]string, error) {
 		subIndexes := pattern.FindSubmatchIndex(content[i:])
 		if len(subIndexes) > 0 {
 			end := subIndexes[1]
-			stmt.Write(getMatch(content, i, subIndexes, 2, 3))
-			stmtTail := getMatch(content, i, subIndexes, 4, 5)
-			comment := getMatch(content, i, subIndexes, 6, 7)
-			lineComment := getMatch(content, i, subIndexes, 8, 9)
+			stmt.Write(getMatch(content, i, subIndexes, 2, 3, span))
+			stmtTail := getMatch(content, i, subIndexes, 4, 5, span)
+			comment := getMatch(content, i, subIndexes, 6, 7, span)
+			lineComment := getMatch(content, i, subIndexes, 8, 9, span)
 			if comment == nil && lineComment == nil {
 				if stmtTail != nil && string(bytes.TrimSpace(stmtTail)) == ";" {
 					stmtList = append(stmtList, stmt.String())
@@ -234,7 +271,12 @@ func getStmtsFromFile(fileName string) ([]string, error) {
 }
 
 // getMatch returns the matched substring if there's a match, nil otherwise
-func getMatch(src []byte, base int, match []int, start int, end int) []byte {
+func getMatch(src []byte, base int, match []int, start int, end int, parentSpan opentracing.Span) []byte {
+	span := opentracing.StartSpan("getMatch", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Package", "cassandra")
+
 	if match[start] >= 0 {
 		return src[base+match[start] : base+match[end]]
 	} else {
@@ -243,7 +285,12 @@ func getMatch(src []byte, base int, match []int, start int, end int) []byte {
 }
 
 // getKeyspaceNameFromUseStmt return keyspace name for use statement
-func getKeyspaceNameFromUseStmt(stmt string) (string, bool) {
+func getKeyspaceNameFromUseStmt(stmt string, parentSpan opentracing.Span) (string, bool) {
+	span := opentracing.StartSpan("getKeyspaceNameFromUseStmt", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Package", "cassandra")
+
 	pattern := regexp.MustCompile(`(?ms)[Uu][Ss][Ee]\s+("(?:[^"]|"")+"|\w+)`)
 	if pattern.MatchString(stmt) {
 		match := pattern.FindStringSubmatch(stmt)
@@ -268,7 +315,11 @@ func getKeyspaceNameFromUseStmt(stmt string) (string, bool) {
 //	 connectionHost : name of host for the connection
 //
 // Returns a session Holder to store the session, or an error if the timeout was reached
-func loop(timeout time.Duration, initializer Initializer, connectionHost string) (Holder, error) {
+func loop(timeout time.Duration, initializer Initializer, connectionHost string, parentSpan opentracing.Span) (Holder, error) {
+	span := opentracing.StartSpan("loop", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Package", "cassandra")
 
 	log.Debugf("Connection loop to connect to %s, timeout to use: %s", connectionHost, timeout)
 	ticker := time.NewTicker(1 * time.Second)
@@ -282,7 +333,7 @@ func loop(timeout time.Duration, initializer Initializer, connectionHost string)
 
 		case <-ticker.C:
 			log.Infof("Trying to connect to: %s", connectionHost)
-			connectionHolder, err := initializer.NewSession()
+			connectionHolder, err := initializer.NewSession(span)
 			if err == nil {
 				log.Infof("Successful connection to: %s", connectionHost)
 				return connectionHolder, nil

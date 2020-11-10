@@ -3,6 +3,7 @@ package cassandra
 import (
 	"github.com/gocql/gocql"
 	log "github.com/motiv-labs/logwrapper"
+	"github.com/opentracing/opentracing-go"
 	"strconv"
 	"time"
 )
@@ -47,7 +48,12 @@ type queryRetry struct {
 
 // Exec wrapper to retry around gocql Exec(). We have a retry approach in place + incremental approach used. For example:
 // First time it will wait 1 second, second time 2 seconds, ... It will depend on the values for retries and seconds to wait.
-func (q queryRetry) Exec() error {
+func (q queryRetry) Exec(parentSpan opentracing.Span) error {
+	span := opentracing.StartSpan("Exec", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Interface", "queryRetry")
+
 	log.Debug("running queryRetry Exec() method")
 
 	retryAttempts := cassandraRetryAttempts
@@ -81,7 +87,12 @@ func (q queryRetry) Exec() error {
 
 // Scan wrapper to retry around gocql Scan(). We have a retry approach in place + incremental approach used. For example:
 // First time it will wait 1 second, second time 2 seconds, ... It will depend on the values for retries and seconds to wait.
-func (q queryRetry) Scan(dest ...interface{}) error {
+func (q queryRetry) Scan(parentSpan opentracing.Span, dest ...interface{}) error {
+	span := opentracing.StartSpan("Scan", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Interface", "queryRetry")
+
 	log.Debug("running queryRetry Scan() method")
 
 	retries := cassandraRetryAttempts
@@ -115,7 +126,12 @@ func (q queryRetry) Scan(dest ...interface{}) error {
 }
 
 // Iter just a wrapper to be able to call this method
-func (q queryRetry) Iter() *gocql.Iter {
+func (q queryRetry) Iter(parentSpan opentracing.Span) *gocql.Iter {
+	span := opentracing.StartSpan("Iter", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Interface", "queryRetry")
+
 	log.Debug("running queryRetry Iter() method")
 
 	return q.goCqlQuery.Iter()
