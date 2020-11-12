@@ -83,11 +83,7 @@ func (q queryRetry) Exec() error {
 
 // Scan wrapper to retry around gocql Scan(). We have a retry approach in place + incremental approach used. For example:
 // First time it will wait 1 second, second time 2 seconds, ... It will depend on the values for retries and seconds to wait.
-func (q queryRetry) Scan(parentSpan opentracing.Span, dest ...interface{}) error {
-	span := opentracing.StartSpan("Scan", opentracing.ChildOf(parentSpan.Context()))
-	defer span.Finish()
-	span.SetTag("Module", "cassandra")
-	span.SetTag("Interface", "queryRetry")
+func (q queryRetry) Scan(dest ...interface{}) error {
 
 	log.Debug("running queryRetry Scan() method")
 
