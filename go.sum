@@ -217,6 +217,8 @@ github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd/go.mod h1:6dJ
 github.com/modern-go/reflect2 v1.0.1/go.mod h1:bx2lNnkwVCuqBIxFjflWJWanXIb3RllmbCylyMrvgv0=
 github.com/motiv-labs/jaeger v0.0.0-20201110150034-d3909c4dd4cd h1:zZiNCny9NoBvhUMk7/C0Fp1EO9H5gqysx5RAvrz6gY0=
 github.com/motiv-labs/jaeger v0.0.0-20201110150034-d3909c4dd4cd/go.mod h1:bgeFg5LSxpTkhqt2wH2F7LbFBk2PJ/ugEN4CiCoauVo=
+github.com/motiv-labs/jaeger v0.0.0-20201112135314-3849f8ea6a04 h1:KByBSyMFhj0HnQS/Yl/ODqXUiaP3vR8y8LkHqOjygYo=
+github.com/motiv-labs/jaeger v0.0.0-20201112135314-3849f8ea6a04/go.mod h1:bgeFg5LSxpTkhqt2wH2F7LbFBk2PJ/ugEN4CiCoauVo=
 github.com/motiv-labs/logwrapper v0.0.0-20200730204649-23847eed3caa h1:kWOPoQD77z56etTcoipVwzMWDxPLrC0PjMJFOnJ9Q4Y=
 github.com/motiv-labs/logwrapper v0.0.0-20200730204649-23847eed3caa/go.mod h1:qNSomafR+qfBR1SGEEUmhXw0+q7J9z6volYErytVjnY=
 github.com/motiv-labs/logwrapper v0.0.0-20200803155305-77486f050f5c h1:FOsZ96cOfaP38cDyRZ+1tLWmqNzC3oysB8o09wtJLcw=
