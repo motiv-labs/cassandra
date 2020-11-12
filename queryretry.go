@@ -3,7 +3,6 @@ package cassandra
 import (
 	"github.com/gocql/gocql"
 	log "github.com/motiv-labs/logwrapper"
-	"github.com/opentracing/opentracing-go"
 	"strconv"
 	"time"
 )
@@ -134,11 +133,7 @@ func (q queryRetry) PageState(state []byte) *gocql.Query {
 }
 
 // PageSize just a wrapper to be able to call this method
-func (q queryRetry) PageSize(n int, parentSpan opentracing.Span) *gocql.Query {
-	span := opentracing.StartSpan("PageSize", opentracing.ChildOf(parentSpan.Context()))
-	defer span.Finish()
-	span.SetTag("Module", "cassandra")
-	span.SetTag("Interface", "queryRetry")
+func (q queryRetry) PageSize(n int) *gocql.Query {
 
 	log.Debug("running queryRetry PageSize() method")
 

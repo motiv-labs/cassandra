@@ -27,5 +27,5 @@ type QueryInterface interface {
 	Scan(dest ...interface{}) error
 	Iter() *gocql.Iter
 	PageState(state []byte) *gocql.Query
-	PageSize(n int, parentSpan opentracing.Span) *gocql.Query
+	PageSize(n int) *gocql.Query
 }
