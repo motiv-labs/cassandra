@@ -118,11 +118,7 @@ func (q queryRetry) Scan(dest ...interface{}) error {
 }
 
 // Iter just a wrapper to be able to call this method
-func (q queryRetry) Iter(parentSpan opentracing.Span) *gocql.Iter {
-	span := opentracing.StartSpan("Iter", opentracing.ChildOf(parentSpan.Context()))
-	defer span.Finish()
-	span.SetTag("Module", "cassandra")
-	span.SetTag("Interface", "queryRetry")
+func (q queryRetry) Iter() *gocql.Iter {
 
 	log.Debug("running queryRetry Iter() method")
 
