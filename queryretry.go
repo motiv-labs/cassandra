@@ -48,11 +48,7 @@ type queryRetry struct {
 
 // Exec wrapper to retry around gocql Exec(). We have a retry approach in place + incremental approach used. For example:
 // First time it will wait 1 second, second time 2 seconds, ... It will depend on the values for retries and seconds to wait.
-func (q queryRetry) Exec(parentSpan opentracing.Span) error {
-	span := opentracing.StartSpan("Exec", opentracing.ChildOf(parentSpan.Context()))
-	defer span.Finish()
-	span.SetTag("Module", "cassandra")
-	span.SetTag("Interface", "queryRetry")
+func (q queryRetry) Exec() error {
 
 	log.Debug("running queryRetry Exec() method")
 
@@ -138,7 +134,11 @@ func (q queryRetry) Iter(parentSpan opentracing.Span) *gocql.Iter {
 }
 
 // PageState just a wrapper to be able to call this method
-func (q queryRetry) PageState(state []byte) *gocql.Query {
+func (q queryRetry) PageState(state []byte, parentSpan opentracing.Span) *gocql.Query {
+	span := opentracing.StartSpan("PageState", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Interface", "queryRetry")
 
 	log.Debug("running queryRetry PageState() method")
 
