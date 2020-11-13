@@ -24,7 +24,7 @@ type SessionInterface interface {
 type QueryInterface interface {
 	Exec(parentSpan opentracing.Span) error
 	Scan(parentSpan opentracing.Span, dest ...interface{}) error
-	Iter(parentSpan opentracing.Span) QueryInterface
+	Iter(parentSpan opentracing.Span) IterInterface
 	PageState(state []byte, parentSpan opentracing.Span) QueryInterface
 	PageSize(n int, parentSpan opentracing.Span) QueryInterface
 }

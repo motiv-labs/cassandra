@@ -132,7 +132,7 @@ func (q queryRetry) Scan(parentSpan opentracing.Span, dest ...interface{}) error
 }
 
 // Iter just a wrapper to be able to call this method
-func (q queryRetry) Iter(parentSpan opentracing.Span) QueryInterface {
+func (q queryRetry) Iter(parentSpan opentracing.Span) IterInterface {
 	span := opentracing.StartSpan("Iter", opentracing.ChildOf(parentSpan.Context()))
 	defer span.Finish()
 	span.SetTag("Module", "cassandra")
@@ -140,7 +140,7 @@ func (q queryRetry) Iter(parentSpan opentracing.Span) QueryInterface {
 
 	log.Debug("running queryRetry Iter() method")
 
-	return queryRetry{goCqlIter: q.goCqlQuery.Iter()}
+	return iterRetry{goCqlIter: q.goCqlQuery.Iter()}
 }
 
 // PageState just a wrapper to be able to call this method
