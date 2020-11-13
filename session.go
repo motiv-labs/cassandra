@@ -1,7 +1,6 @@
 package cassandra
 
 import (
-	"github.com/gocql/gocql"
 	"github.com/opentracing/opentracing-go"
 )
 
@@ -23,9 +22,16 @@ type SessionInterface interface {
 }
 
 type QueryInterface interface {
-	Exec() error
-	Scan(dest ...interface{}) error
-	Iter() *gocql.Iter
-	PageState(state []byte) *gocql.Query
-	PageSize(n int) *gocql.Query
+	Exec(parentSpan opentracing.Span) error
+	Scan(parentSpan opentracing.Span, dest ...interface{}) error
+	Iter(parentSpan opentracing.Span) IterInterface
+	PageState(state []byte, parentSpan opentracing.Span) QueryInterface
+	PageSize(n int, parentSpan opentracing.Span) QueryInterface
+}
+
+type IterInterface interface {
+	Scan(parentSpan opentracing.Span, dest ...interface{}) bool
+	WillSwitchPage(parentSpan opentracing.Span) bool
+	PageState(parentSpan opentracing.Span) []byte
+	Close(parentSpan opentracing.Span) error
 }

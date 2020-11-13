@@ -3,6 +3,7 @@ package cassandra
 import (
 	"github.com/gocql/gocql"
 	log "github.com/motiv-labs/logwrapper"
+	"github.com/opentracing/opentracing-go"
 	"strconv"
 	"time"
 )
@@ -45,9 +46,18 @@ type queryRetry struct {
 	goCqlQuery *gocql.Query
 }
 
+// iterRetry is an implementation of IterInterface
+type iterRetry struct {
+	goCqlIter *gocql.Iter
+}
+
 // Exec wrapper to retry around gocql Exec(). We have a retry approach in place + incremental approach used. For example:
 // First time it will wait 1 second, second time 2 seconds, ... It will depend on the values for retries and seconds to wait.
-func (q queryRetry) Exec() error {
+func (q queryRetry) Exec(parentSpan opentracing.Span) error {
+	span := opentracing.StartSpan("Exec", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Interface", "queryRetry")
 
 	log.Debug("running queryRetry Exec() method")
 
@@ -82,7 +92,11 @@ func (q queryRetry) Exec() error {
 
 // Scan wrapper to retry around gocql Scan(). We have a retry approach in place + incremental approach used. For example:
 // First time it will wait 1 second, second time 2 seconds, ... It will depend on the values for retries and seconds to wait.
-func (q queryRetry) Scan(dest ...interface{}) error {
+func (q queryRetry) Scan(parentSpan opentracing.Span, dest ...interface{}) error {
+	span := opentracing.StartSpan("Scan", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Interface", "queryRetry")
 
 	log.Debug("running queryRetry Scan() method")
 
@@ -117,25 +131,85 @@ func (q queryRetry) Scan(dest ...interface{}) error {
 }
 
 // Iter just a wrapper to be able to call this method
-func (q queryRetry) Iter() *gocql.Iter {
+func (q queryRetry) Iter(parentSpan opentracing.Span) IterInterface {
+	span := opentracing.StartSpan("Iter", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Interface", "queryRetry")
 
 	log.Debug("running queryRetry Iter() method")
 
-	return q.goCqlQuery.Iter()
+	return iterRetry{goCqlIter: q.goCqlQuery.Iter()}
 }
 
 // PageState just a wrapper to be able to call this method
-func (q queryRetry) PageState(state []byte) *gocql.Query {
+func (q queryRetry) PageState(state []byte, parentSpan opentracing.Span) QueryInterface {
+	span := opentracing.StartSpan("PageState", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Interface", "queryRetry")
 
 	log.Debug("running queryRetry PageState() method")
 
-	return q.goCqlQuery.PageState(state)
+	return queryRetry{goCqlQuery: q.goCqlQuery.PageState(state)}
 }
 
 // PageSize just a wrapper to be able to call this method
-func (q queryRetry) PageSize(n int) *gocql.Query {
+func (q queryRetry) PageSize(n int, parentSpan opentracing.Span) QueryInterface {
+	span := opentracing.StartSpan("PageSize", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Interface", "queryRetry")
 
 	log.Debug("running queryRetry PageSize() method")
 
-	return q.goCqlQuery.PageSize(n)
+	return queryRetry{goCqlQuery: q.goCqlQuery.PageSize(n)}
+}
+
+//
+func (i iterRetry) Scan(parentSpan opentracing.Span, dest ...interface{}) bool {
+	span := opentracing.StartSpan("Scan", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Interface", "iterRetry")
+
+	log.Debug("running iterRetry Scan() method")
+
+	return i.goCqlIter.Scan(dest...)
+}
+
+// WillSwitchPage is just a wrapper to be able to call this method
+func (i iterRetry) WillSwitchPage(parentSpan opentracing.Span) bool {
+	span := opentracing.StartSpan("WillSwitchPage", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Interface", "iterRetry")
+
+	log.Debug("running iterRetry Close() method")
+
+	return i.goCqlIter.WillSwitchPage()
+}
+
+// PageState is just a wrapper to be able to call this method
+func (i iterRetry) PageState(parentSpan opentracing.Span) []byte {
+	span := opentracing.StartSpan("PageState", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Interface", "iterRetry")
+
+	log.Debug("running iterRetry PageState() method")
+
+	return i.goCqlIter.PageState()
+}
+
+// Close is just a wrapper to be able to call this method
+func (i iterRetry) Close(parentSpan opentracing.Span) error {
+	span := opentracing.StartSpan("Close", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Interface", "iterRetry")
+
+	log.Debug("running iterRetry Close() method")
+
+	return i.goCqlIter.Close()
 }
