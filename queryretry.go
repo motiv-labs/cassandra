@@ -47,6 +47,11 @@ type queryRetry struct {
 	goCqlIter *gocql.Iter
 }
 
+// iterRetry is an implementation of IterInterface
+type iterRetry struct {
+	goCqlIter *gocql.Iter
+}
+
 // Exec wrapper to retry around gocql Exec(). We have a retry approach in place + incremental approach used. For example:
 // First time it will wait 1 second, second time 2 seconds, ... It will depend on the values for retries and seconds to wait.
 func (q queryRetry) Exec(parentSpan opentracing.Span) error {
@@ -160,4 +165,67 @@ func (q queryRetry) PageSize(n int, parentSpan opentracing.Span) QueryInterface 
 	log.Debug("running queryRetry PageSize() method")
 
 	return queryRetry{goCqlQuery: q.goCqlQuery.PageSize(n)}
+}
+
+//
+func (i iterRetry) Scan(parentSpan opentracing.Span, dest ...interface{}) bool {
+	span := opentracing.StartSpan("Scan", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Interface", "iterRetry")
+
+	log.Debug("running iterRetry Scan() method")
+
+	retries := cassandraRetryAttempts
+	secondsToSleep := 0
+
+	var result bool
+
+	attempts := 1
+	for attempts <= retries {
+		//we will try to run the method several times until attempts is met
+		result = i.goCqlIter.Scan(dest...)
+		if result == false {
+			log.Warnf("Iter.Scan() failed: %v, attempt: %d / %d", result, attempts, retries)
+
+			// incremental sleep
+			secondsToSleep = secondsToSleep + cassandraSecondsToSleepIncrement
+
+			log.Warnf("sleeping for %d second", secondsToSleep)
+
+			log.Warnf("sleeping for %d second", secondsToSleep)
+			time.Sleep(time.Duration(secondsToSleep) * time.Second)
+		} else {
+			// in case the error is nil, we stop and return
+			return result
+		}
+
+		attempts = attempts + 1
+	}
+
+	return result
+}
+
+// WillSwitchPage is just a wrapper to be able to call this method
+func (i iterRetry) WillSwitchPage(parentSpan opentracing.Span) bool {
+	span := opentracing.StartSpan("WillSwitchPage", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Interface", "iterRetry")
+
+	log.Debug("running iterRetry Close() method")
+
+	return i.goCqlIter.WillSwitchPage()
+}
+
+// Close is just a wrapper to be able to call this method
+func (i iterRetry) Close(parentSpan opentracing.Span) error {
+	span := opentracing.StartSpan("Close", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Interface", "iterRetry")
+
+	log.Debug("running iterRetry Close() method")
+
+	return i.goCqlIter.Close()
 }
