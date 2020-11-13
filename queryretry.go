@@ -175,7 +175,7 @@ func (i iterRetry) Scan(parentSpan opentracing.Span, dest ...interface{}) bool {
 
 	log.Debug("running iterRetry Scan() method")
 
-	return i.goCqlIter.Scan()
+	return i.goCqlIter.Scan(dest)
 }
 
 // WillSwitchPage is just a wrapper to be able to call this method
