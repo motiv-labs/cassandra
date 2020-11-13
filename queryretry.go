@@ -43,6 +43,7 @@ func init() {
 // queryRetry is an implementation of QueryInterface
 type queryRetry struct {
 	goCqlQuery *gocql.Query
+	goCqlIter *gocql.Iter
 }
 
 // Exec wrapper to retry around gocql Exec(). We have a retry approach in place + incremental approach used. For example:
@@ -117,25 +118,25 @@ func (q queryRetry) Scan(dest ...interface{}) error {
 }
 
 // Iter just a wrapper to be able to call this method
-func (q queryRetry) Iter() *gocql.Iter {
+func (q queryRetry) Iter() QueryInterface {
 
 	log.Debug("running queryRetry Iter() method")
 
-	return q.goCqlQuery.Iter()
+	return queryRetry{goCqlIter: q.goCqlQuery.Iter()}
 }
 
 // PageState just a wrapper to be able to call this method
-func (q queryRetry) PageState(state []byte) *gocql.Query {
+func (q queryRetry) PageState(state []byte) QueryInterface {
 
 	log.Debug("running queryRetry PageState() method")
 
-	return q.goCqlQuery.PageState(state)
+	return queryRetry{goCqlQuery: q.goCqlQuery.PageState(state)}
 }
 
 // PageSize just a wrapper to be able to call this method
-func (q queryRetry) PageSize(n int) *gocql.Query {
+func (q queryRetry) PageSize(n int) QueryInterface {
 
 	log.Debug("running queryRetry PageSize() method")
 
-	return q.goCqlQuery.PageSize(n)
+	return queryRetry{goCqlQuery: q.goCqlQuery.PageSize(n)}
 }
