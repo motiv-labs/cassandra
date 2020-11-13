@@ -176,34 +176,7 @@ func (i iterRetry) Scan(parentSpan opentracing.Span, dest ...interface{}) bool {
 
 	log.Debug("running iterRetry Scan() method")
 
-	retries := cassandraRetryAttempts
-	secondsToSleep := 0
-
-	var result bool
-
-	attempts := 1
-	for attempts <= retries {
-		//we will try to run the method several times until attempts is met
-		result = i.goCqlIter.Scan(dest...)
-		if result == false {
-			log.Warnf("Iter.Scan() failed: %v, attempt: %d / %d", result, attempts, retries)
-
-			// incremental sleep
-			secondsToSleep = secondsToSleep + cassandraSecondsToSleepIncrement
-
-			log.Warnf("sleeping for %d second", secondsToSleep)
-
-			log.Warnf("sleeping for %d second", secondsToSleep)
-			time.Sleep(time.Duration(secondsToSleep) * time.Second)
-		} else {
-			// in case the error is nil, we stop and return
-			return result
-		}
-
-		attempts = attempts + 1
-	}
-
-	return result
+	return i.goCqlIter.Scan()
 }
 
 // WillSwitchPage is just a wrapper to be able to call this method
