@@ -44,7 +44,6 @@ func init() {
 // queryRetry is an implementation of QueryInterface
 type queryRetry struct {
 	goCqlQuery *gocql.Query
-	goCqlIter *gocql.Iter
 }
 
 // iterRetry is an implementation of IterInterface
