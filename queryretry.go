@@ -218,6 +218,18 @@ func (i iterRetry) WillSwitchPage(parentSpan opentracing.Span) bool {
 	return i.goCqlIter.WillSwitchPage()
 }
 
+// PageState is just a wrapper to be able to call this method
+func (i iterRetry) PageState(parentSpan opentracing.Span) []byte {
+	span := opentracing.StartSpan("PageState", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Interface", "iterRetry")
+
+	log.Debug("running iterRetry PageState() method")
+
+	return i.goCqlIter.PageState()
+}
+
 // Close is just a wrapper to be able to call this method
 func (i iterRetry) Close(parentSpan opentracing.Span) error {
 	span := opentracing.StartSpan("Close", opentracing.ChildOf(parentSpan.Context()))

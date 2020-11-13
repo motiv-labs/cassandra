@@ -32,5 +32,6 @@ type QueryInterface interface {
 type IterInterface interface {
 	Scan(parentSpan opentracing.Span, dest ...interface{}) bool
 	WillSwitchPage(parentSpan opentracing.Span) bool
+	PageState(parentSpan opentracing.Span) []byte
 	Close(parentSpan opentracing.Span) error
 }
