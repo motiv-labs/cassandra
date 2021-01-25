@@ -62,7 +62,7 @@ func ExampleNew() {
 	session.Query(span, "SELECT * FROM my_table").Exec(span)
 }
 
-func ExampleIterInterface_Scan() {
+func Example_iterRetry_Scan() {
 
 	type Data struct {
 		Data1 string
@@ -106,7 +106,7 @@ func ExampleIterInterface_Scan() {
 	// return ...
 }
 
-func ExampleIterRetry_ScanAndClose() {
+func Example_iterRetry_ScanAndClose() {
 
 	type Data struct {
 		Data1 string
