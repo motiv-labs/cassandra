@@ -219,7 +219,7 @@ func (i iterRetry) Close(parentSpan opentracing.Span) error {
 // First time it will wait 1 second, second time 2 seconds, ... It will depend on the values for retries
 // and seconds to wait.
 func (i iterRetry) ScanAndClose(parentSpan opentracing.Span, object interface{},
-	handle func(object interface{}), dest ...interface{}) error {
+	handle func(object interface{}) bool, dest ...interface{}) error {
 
 	span := opentracing.StartSpan("ScanAndClose", opentracing.ChildOf(parentSpan.Context()))
 	defer span.Finish()
@@ -239,7 +239,9 @@ func (i iterRetry) ScanAndClose(parentSpan opentracing.Span, object interface{},
 		// Scan consumes the next row of the iterator and copies the columns of the
 		// current row into the values pointed at by dest.
 		for i.goCqlIter.Scan(span, dest) {
-			handle(object)
+			if !handle(object) {
+				break
+			}
 		}
 
 		// we will try to run the method several times until attempts is met

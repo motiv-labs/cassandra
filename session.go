@@ -35,5 +35,5 @@ type IterInterface interface {
 	PageState(parentSpan opentracing.Span) []byte
 	Close(parentSpan opentracing.Span) error
 	ScanAndClose(parentSpan opentracing.Span, object interface{},
-		handle func(object interface{}), dest ...interface{}) error
+		handle func(object interface{}) bool, dest ...interface{}) error
 }

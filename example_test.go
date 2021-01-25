@@ -138,8 +138,9 @@ func Example_iterRetry_ScanAndClose() {
 	var data Data
 	var dataList []Data
 
-	if err := iter.ScanAndClose(span, data, func(object interface{}) {
+	if err := iter.ScanAndClose(span, data, func(object interface{}) bool {
 		dataList = append(dataList, object.(Data))
+		return true
 	}, &data.Data1, &data.Data2, &data.Data3, &data.Data4); err != nil {
 		log.Error("error while querying table")
 		// return ...
