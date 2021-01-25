@@ -213,3 +213,46 @@ func (i iterRetry) Close(parentSpan opentracing.Span) error {
 
 	return i.goCqlIter.Close()
 }
+
+func (i iterRetry) ScanAndClose(parentSpan opentracing.Span, object interface{},
+	handle func(object interface{}), dest ...interface{}) error {
+	span := opentracing.StartSpan("ScanAndClose", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Interface", "iterRetry")
+
+	retries := cassandraRetryAttempts
+	secondsToSleep := 0
+
+	var err error
+
+	attempts := 1
+	for attempts <= retries {
+
+		log.Debug("running iterRetry Scan() method")
+
+		for i.goCqlIter.Scan(span, dest) {
+			handle(object)
+		}
+
+		//we will try to run the method several times until attempts is met
+		err = i.goCqlIter.Close()
+		if err != nil {
+			log.Warnf("error when running Close(): %v, attempt: %d / %d", err, attempts, retries)
+
+			// incremental sleep
+			secondsToSleep = secondsToSleep + cassandraSecondsToSleepIncrement
+
+			log.Warnf("sleeping for %d second", secondsToSleep)
+
+			time.Sleep(time.Duration(secondsToSleep) * time.Second)
+		} else {
+			// in case the error is nil, we stop and return
+			return err
+		}
+
+		attempts = attempts + 1
+	}
+
+	return err
+}
