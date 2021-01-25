@@ -214,8 +214,12 @@ func (i iterRetry) Close(parentSpan opentracing.Span) error {
 	return i.goCqlIter.Close()
 }
 
+var nil Type
+
+type Type int
+
 func (i iterRetry) ScanAndClose(parentSpan opentracing.Span, object interface{},
-	handle func(object interface{}), dest ...interface{}) error {
+	handle func(object Type), dest ...interface{}) error {
 	span := opentracing.StartSpan("ScanAndClose", opentracing.ChildOf(parentSpan.Context()))
 	defer span.Finish()
 	span.SetTag("Module", "cassandra")
