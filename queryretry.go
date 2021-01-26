@@ -213,3 +213,52 @@ func (i iterRetry) Close(parentSpan opentracing.Span) error {
 
 	return i.goCqlIter.Close()
 }
+
+// ScanAndClose is a wrapper to retry around the gocql Scan() and Close().
+// We have a retry approach in place + incremental approach used. For example:
+// First time it will wait 1 second, second time 2 seconds, ... It will depend on the values for retries
+// and seconds to wait.
+func (i iterRetry) ScanAndClose(parentSpan opentracing.Span, handle func() bool, dest ...interface{}) error {
+
+	span := opentracing.StartSpan("ScanAndClose", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Interface", "iterRetry")
+
+	retries := cassandraRetryAttempts
+	secondsToSleep := 0
+
+	var err error
+
+	attempts := 1
+	for attempts <= retries {
+
+		// Scan consumes the next row of the iterator and copies the columns of the
+		// current row into the values pointed at by dest.
+		for i.goCqlIter.Scan(dest...) {
+			if !handle() {
+				break
+			}
+		}
+
+		// we will try to run the method several times until attempts is met
+		if err = i.goCqlIter.Close(); err != nil {
+
+			log.Warnf("error when running Close(): %v, attempt: %d / %d", err, attempts, retries)
+
+			// incremental sleep
+			secondsToSleep += cassandraSecondsToSleepIncrement
+
+			log.Warnf("sleeping for %d second", secondsToSleep)
+
+			time.Sleep(time.Duration(secondsToSleep) * time.Second)
+		} else {
+			// in case the error is nil, we stop and return
+			return err
+		}
+
+		attempts++
+	}
+
+	return err
+}

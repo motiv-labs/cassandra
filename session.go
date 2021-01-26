@@ -34,4 +34,5 @@ type IterInterface interface {
 	WillSwitchPage(parentSpan opentracing.Span) bool
 	PageState(parentSpan opentracing.Span) []byte
 	Close(parentSpan opentracing.Span) error
+	ScanAndClose(parentSpan opentracing.Span, handle func() bool, dest ...interface{}) error
 }
