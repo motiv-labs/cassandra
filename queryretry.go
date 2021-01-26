@@ -234,11 +234,9 @@ func (i iterRetry) ScanAndClose(parentSpan opentracing.Span, object interface{},
 	attempts := 1
 	for attempts <= retries {
 
-		log.Debug("running iterRetry Scan() method")
-
 		// Scan consumes the next row of the iterator and copies the columns of the
 		// current row into the values pointed at by dest.
-		for i.goCqlIter.Scan(span, dest) {
+		for i.goCqlIter.Scan(dest...) {
 			if !handle(object) {
 				break
 			}
