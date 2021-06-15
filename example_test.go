@@ -19,12 +19,12 @@ func Example() {
 
 	// Cassandra initialization - initializes Cassandra keyspace and creates tables if required
 	// Needs to be called only on the app startup
-	Initialize("cluster_hostname", "system_keyspace", "application_keyspace", 120*time.Second, span)
+	Initialize("system_keyspace", "application_keyspace", 120*time.Second, span)
 
 	// Now that Cassandra is initialized we can start new connections
 
 	// Getting a cassandra connection initializer
-	sessionInitializer := New("db", "application_keyspace", span)
+	sessionInitializer := New("application_keyspace", span)
 
 	// Starting a new cassandra session
 	sessionHolder, err := sessionInitializer.NewSession(span)
@@ -45,7 +45,7 @@ func ExampleNew() {
 	span := getSpan()
 
 	// Getting a cassandra connection initializer
-	sessionInitializer := New("db", "application_keyspace", span)
+	sessionInitializer := New("application_keyspace", span)
 
 	// Starting a new cassandra session
 	sessionHolder, err := sessionInitializer.NewSession(span)
@@ -74,7 +74,7 @@ func Example_iterRetry_Scan() {
 	span := getSpan()
 
 	// Getting a cassandra connection initializer
-	sessionInitializer := New("db", "application_keyspace", span)
+	sessionInitializer := New( "application_keyspace", span)
 
 	// Starting a new cassandra session
 	sessionHolder, err := sessionInitializer.NewSession(span)
@@ -118,7 +118,7 @@ func Example_iterRetry_ScanAndClose() {
 	span := getSpan()
 
 	// Getting a cassandra connection initializer
-	sessionInitializer := New("db", "application_keyspace", span)
+	sessionInitializer := New("application_keyspace", span)
 
 	// Starting a new cassandra session
 	sessionHolder, err := sessionInitializer.NewSession(span)
