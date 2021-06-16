@@ -19,31 +19,55 @@ import (
 const (
 	schemaDefaultPath     = "/usr/local/bin"
 	schemaDefaultFileName = "schema.sql"
+	defaultCassandraDomain = "db"
+	defaultCassandraClusterConsistency = gocql.Quorum
+	defaultUsername = ""
+	defaultPassword = ""
+	defaultSSLCert = ""
 
+	envCassandraClusterConsistency = "CLUSTER_CONSISTENCY"
 	envCassandraSchemaPath     = "CASSANDRA_SCHEMA_PATH"
 	envCassandraSchemaFileName = "CASSANDRA_SCHEMA_FILE_NAME"
+	envCassandraDomain = "CASSANDRA_DOMAIN_NAME"
+	envUsername = "CASSANDRA_USERNAME"
+	envPassword = "CASSANDRA_PASSWORD"
+	envSSLCert = "CASSANDRA_SSL_CERT"
 )
 
 var schemaPath = "/usr/local/bin"
 var schemaFileName = "schema.sql"
 var clusterConsistency = gocql.Quorum
+var domain = "db"
+var username = ""
+var password = ""
+var sslCert = ""
 
 // Package level initialization.
 //
 // init functions are automatically executed when the programs starts
 func init() {
-
 	// reading and setting up environment variables
 	schemaPath = getenv(envCassandraSchemaPath, schemaDefaultPath)
 	schemaFileName = getenv(envCassandraSchemaFileName, schemaDefaultFileName)
+	domain = getenv(envCassandraDomain, defaultCassandraDomain)
+	clusterConsistency = checkConsistency(getenv(envCassandraClusterConsistency, defaultCassandraClusterConsistency.String()))
+	username = getenvnolog(envUsername, defaultUsername)
+	password = getenvnolog(envPassword, defaultPassword)
+	sslCert = getenvnolog(envSSLCert, defaultSSLCert)
 
 	log.Debugf("Got schema path: %s", schemaPath)
 	log.Debugf("Got schema file name: %s", schemaFileName)
+	log.Debugf("Got domain name: %s", domain)
+	log.Debugf("Got cluster consistency: %s", clusterConsistency)
+	log.Debugf("Got username: %s", username)
 }
 
 // sessionInitializer is an initializer for a cassandra session
 type sessionInitializer struct {
 	clusterHostName string
+	clusterHostUsername string
+	clusterHostPassword string
+	clusterHostSSLCert string
 	keyspace        string
 	consistency gocql.Consistency
 }
@@ -54,19 +78,19 @@ type sessionHolder struct {
 }
 
 // New return a cassandra session Initializer
-func New(clusterHostName, keyspace string, parentSpan opentracing.Span) Initializer {
+func New(keyspace string, parentSpan opentracing.Span) Initializer {
 	span := opentracing.StartSpan("New", opentracing.ChildOf(parentSpan.Context()))
 	defer span.Finish()
 	span.SetTag("Module", "cassandra")
 	span.SetTag("Package", "cassandra")
 
-	consistencyEnv := getenv("CLUSTER_CONSISTENCY", clusterConsistency.String())
-	consistency := checkConsistency(consistencyEnv)
-
 	return sessionInitializer{
-		clusterHostName: clusterHostName,
-		keyspace:        keyspace,
-		consistency: consistency,
+		clusterHostName:     domain,
+		clusterHostUsername: username,
+		clusterHostPassword: password,
+		clusterHostSSLCert:  sslCert,
+		keyspace:            keyspace,
+		consistency:         clusterConsistency,
 	}
 }
 
@@ -78,14 +102,14 @@ func New(clusterHostName, keyspace string, parentSpan opentracing.Span) Initiali
 //	systemKeyspace: System keyspace
 //	appKeyspace: Application keyspace
 //	connectionTimeout: timeout to get the connection
-func Initialize(clusterHostName, systemKeyspace, appKeyspace string, connectionTimeout time.Duration, parentSpan opentracing.Span) {
+func Initialize(systemKeyspace, appKeyspace string, connectionTimeout time.Duration, parentSpan opentracing.Span) {
 	span := opentracing.StartSpan("Initialize", opentracing.ChildOf(parentSpan.Context()))
 	defer span.Finish()
 	span.SetTag("Module", "cassandra")
 	span.SetTag("Package", "cassandra")
 
 	log.Debug("Setting up cassandra db")
-	connectionHolder, err := loop(connectionTimeout, New(clusterHostName, systemKeyspace, span), "cassandra-db", span)
+	connectionHolder, err := loop(connectionTimeout, New(systemKeyspace, span), domain, span)
 	if err != nil {
 		log.Fatalf("error connecting to Cassandra db: %v", err)
 		panic(err)
@@ -93,7 +117,7 @@ func Initialize(clusterHostName, systemKeyspace, appKeyspace string, connectionT
 	defer connectionHolder.CloseSession(span)
 
 	log.Debug("Setting up cassandra keyspace")
-	err = createAppKeyspaceIfRequired(clusterHostName, systemKeyspace, appKeyspace, span)
+	err = createAppKeyspaceIfRequired(systemKeyspace, appKeyspace, span)
 	if err != nil {
 		log.Fatalf("error creating keyspace for Cassandra db: %v", err)
 		panic(err)
@@ -112,7 +136,9 @@ func (i sessionInitializer) NewSession(parentSpan opentracing.Span) (Holder, err
 	span.SetTag("Module", "cassandra")
 	span.SetTag("Interface", "sessionInitializer")
 
-	session, err := newKeyspaceSession(i.clusterHostName, i.keyspace, 600*time.Millisecond, span)
+	session, err := newKeyspaceSession(i.clusterHostName, i.keyspace,
+		i.clusterHostUsername, i.clusterHostPassword, i.clusterHostSSLCert, i.consistency,
+		600*time.Millisecond, span)
 	if err != nil {
 		log.Errorf("error starting Cassandra session for the cluster hostname: %s and keyspace: %s - %v",
 			i.clusterHostName, i.keyspace, err)
@@ -144,7 +170,7 @@ func (holder sessionHolder) CloseSession(parentSpan opentracing.Span) {
 }
 
 // newKeyspaceSession returns a new session for the given keyspace
-func newKeyspaceSession(clusterHostName, keyspace string, clusterTimeout time.Duration, parentSpan opentracing.Span) (*gocql.Session, error) {
+func newKeyspaceSession(clusterHostName, keyspace, username, password, sslCert string, clusterConsistency gocql.Consistency, clusterTimeout time.Duration, parentSpan opentracing.Span) (*gocql.Session, error) {
 	span := opentracing.StartSpan("newKeyspaceSession", opentracing.ChildOf(parentSpan.Context()))
 	defer span.Finish()
 	span.SetTag("Module", "cassandra")
@@ -154,16 +180,25 @@ func newKeyspaceSession(clusterHostName, keyspace string, clusterTimeout time.Du
 	cluster := gocql.NewCluster(clusterHostName)
 	cluster.Keyspace = keyspace
 	cluster.Timeout = clusterTimeout
+	if username != "" {
+		cluster.Authenticator = gocql.PasswordAuthenticator{
+			Username: username,
+			Password: password,
+		}
+	}
+	if sslCert != "" {
+		cluster.SslOpts = &gocql.SslOptions{
+			CaPath: sslCert,
+		}
+	}
 
-	consistencyEnv := getenv("CLUSTER_CONSISTENCY", clusterConsistency.String())
-	consistency := checkConsistency(consistencyEnv)
-	cluster.Consistency = consistency
+	cluster.Consistency = clusterConsistency
 
 	return cluster.CreateSession()
 }
 
 // createAppKeyspaceIfRequired creates the keyspace for the app if it doesn't exist
-func createAppKeyspaceIfRequired(clusterHostName, systemKeyspace, appKeyspace string, parentSpan opentracing.Span) error {
+func createAppKeyspaceIfRequired(systemKeyspace, appKeyspace string, parentSpan opentracing.Span) error {
 	span := opentracing.StartSpan("createAppKeyspaceIfRequired", opentracing.ChildOf(parentSpan.Context()))
 	defer span.Finish()
 	span.SetTag("Module", "cassandra")
@@ -179,7 +214,7 @@ func createAppKeyspaceIfRequired(clusterHostName, systemKeyspace, appKeyspace st
 	}
 
 	log.Info("about to create a session with a 5 minute timeout to allow for all schema creation")
-	session, err := newKeyspaceSession(clusterHostName, systemKeyspace, 5*time.Minute, span)
+	session, err := newKeyspaceSession(domain, systemKeyspace, username, password, sslCert, clusterConsistency, 5*time.Minute, span)
 	if err != nil {
 		return err
 	}
@@ -205,7 +240,7 @@ func createAppKeyspaceIfRequired(clusterHostName, systemKeyspace, appKeyspace st
 			if (isCaseSensitive && newKeyspace != currentKeyspace) || (!isCaseSensitive &&
 				strings.ToLower(newKeyspace) != strings.ToLower(currentKeyspace)) {
 				log.Infof("about to create a session with a 5 minute timeout to set keyspace: %s", newKeyspace)
-				session, err = newKeyspaceSession(clusterHostName, newKeyspace, 5*time.Minute, span) //5 minutes
+				session, err = newKeyspaceSession(domain, newKeyspace, username, password, sslCert, clusterConsistency, 5*time.Minute, span) //5 minutes
 				if err != nil {
 					return err
 				}
@@ -372,6 +407,27 @@ func getenv(envVariable string, defaultValue string) string {
 	if envStr != "" {
 		returnValue = envStr
 		log.Debugf("Init value for %s set to: %s", envVariable, envStr)
+	}
+
+	return returnValue
+}
+
+// getenvnolog get a string value from an environment variable
+// or return the given default value if the environment variable is not set
+//
+// Params:
+//  envVariable : environment variable
+//  defaultValue : value to return if environment variable is not set
+//
+// Returns the string value for the specified variable
+func getenvnolog(envVariable string, defaultValue string) string {
+
+	log.Debugf("Setting value for: %s", envVariable)
+	returnValue := defaultValue
+	log.Debugf("Default value for %s : %s", envVariable, defaultValue)
+	envStr := os.Getenv(envVariable)
+	if envStr != "" {
+		returnValue = envStr
 	}
 
 	return returnValue
