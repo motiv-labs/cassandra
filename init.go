@@ -70,7 +70,6 @@ type sessionInitializer struct {
 	clusterHostSSLCert string
 	keyspace        string
 	consistency gocql.Consistency
-
 }
 
 // sessionHolder stores a cassandra session
