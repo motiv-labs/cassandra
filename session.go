@@ -33,6 +33,7 @@ type IterInterface interface {
 	Scan(parentSpan opentracing.Span, dest ...interface{}) bool
 	WillSwitchPage(parentSpan opentracing.Span) bool
 	PageState(parentSpan opentracing.Span) []byte
+	MapScan(m map[string]interface{}, parentSpan opentracing.Span) bool
 	Close(parentSpan opentracing.Span) error
 	ScanAndClose(parentSpan opentracing.Span, handle func() bool, dest ...interface{}) error
 }

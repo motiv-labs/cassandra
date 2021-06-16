@@ -202,6 +202,18 @@ func (i iterRetry) PageState(parentSpan opentracing.Span) []byte {
 	return i.goCqlIter.PageState()
 }
 
+// MapScan is just a wrapper to be able to call this method
+func (i iterRetry) MapScan(m map[string]interface{}, parentSpan opentracing.Span) bool {
+	span := opentracing.StartSpan("PageState", opentracing.ChildOf(parentSpan.Context()))
+	defer span.Finish()
+	span.SetTag("Module", "cassandra")
+	span.SetTag("Interface", "iterRetry")
+
+	log.Debug("running iterRetry PageState() method")
+
+	return i.goCqlIter.MapScan(m)
+}
+
 // Close is just a wrapper to be able to call this method
 func (i iterRetry) Close(parentSpan opentracing.Span) error {
 	span := opentracing.StartSpan("Close", opentracing.ChildOf(parentSpan.Context()))
