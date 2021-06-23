@@ -1,39 +1,39 @@
 package cassandra
 
 import (
-	"github.com/opentracing/opentracing-go"
+	"context"
 )
 
 // Initializer is a common interface for functionality to start a new session
 type Initializer interface {
-	NewSession(parentSpan opentracing.Span) (Holder, error)
+	NewSession(ctx context.Context) (Holder, error)
 }
 
 // Holder allows to store a close sessions
 type Holder interface {
-	GetSession(parentSpan opentracing.Span) SessionInterface
-	CloseSession(parentSpan opentracing.Span)
+	GetSession(ctx context.Context) SessionInterface
+	CloseSession(ctx context.Context)
 }
 
 // SessionInterface is an interface to wrap gocql methods used in Motiv
 type SessionInterface interface {
-	Query(parentSpan opentracing.Span, stmt string, values ...interface{}) QueryInterface
-	Close(parentSpan opentracing.Span)
+	Query(ctx context.Context, stmt string, values ...interface{}) QueryInterface
+	Close(ctx context.Context)
 }
 
 type QueryInterface interface {
-	Exec(parentSpan opentracing.Span) error
-	Scan(parentSpan opentracing.Span, dest ...interface{}) error
-	Iter(parentSpan opentracing.Span) IterInterface
-	PageState(state []byte, parentSpan opentracing.Span) QueryInterface
-	PageSize(n int, parentSpan opentracing.Span) QueryInterface
+	Exec(ctx context.Context) error
+	Scan(ctx context.Context, dest ...interface{}) error
+	Iter(ctx context.Context) IterInterface
+	PageState(state []byte, ctx context.Context) QueryInterface
+	PageSize(n int, ctx context.Context) QueryInterface
 }
 
 type IterInterface interface {
-	Scan(parentSpan opentracing.Span, dest ...interface{}) bool
-	WillSwitchPage(parentSpan opentracing.Span) bool
-	PageState(parentSpan opentracing.Span) []byte
-	MapScan(m map[string]interface{}, parentSpan opentracing.Span) bool
-	Close(parentSpan opentracing.Span) error
-	ScanAndClose(parentSpan opentracing.Span, handle func() bool, dest ...interface{}) error
+	Scan(ctx context.Context, dest ...interface{}) bool
+	WillSwitchPage(ctx context.Context) bool
+	PageState(ctx context.Context) []byte
+	MapScan(m map[string]interface{}, ctx context.Context) bool
+	Close(ctx context.Context) error
+	ScanAndClose(ctx context.Context, handle func() bool, dest ...interface{}) error
 }
