@@ -235,6 +235,8 @@ github.com/motiv-labs/logwrapper v0.0.0-20210623155925-eca735cee5c0 h1:9LzgMjTRg
 github.com/motiv-labs/logwrapper v0.0.0-20210623155925-eca735cee5c0/go.mod h1:T5UveIaiSscLaOXIKj8fMraVmGexkHCr7RSEIDMSpYQ=
 github.com/motiv-labs/logwrapper v0.0.0-20210623183622-440cf44936b0 h1:ExecOpugmH8cvp10WSM8exCRqJ7LgR7dVJsTO62qo48=
 github.com/motiv-labs/logwrapper v0.0.0-20210623183622-440cf44936b0/go.mod h1:T5UveIaiSscLaOXIKj8fMraVmGexkHCr7RSEIDMSpYQ=
+github.com/motiv-labs/logwrapper v0.0.0-20210702153104-13e7851a99e8 h1:lenqGo/NgFI1kYV+bwBLFHWk1nfWjkDvGoIodf3NFQs=
+github.com/motiv-labs/logwrapper v0.0.0-20210702153104-13e7851a99e8/go.mod h1:T5UveIaiSscLaOXIKj8fMraVmGexkHCr7RSEIDMSpYQ=
 github.com/mozilla/tls-observatory v0.0.0-20200317151703-4fa42e1c2dee/go.mod h1:SrKMQvPiws7F7iqYp8/TX+IhxCYhzr6N/1yb8cwHsGk=
 github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
 github.com/nakabonne/nestif v0.3.0/go.mod h1:dI314BppzXjJ4HsCnbo7XzrJHPszZsjnk5wEBSYHI2c=
