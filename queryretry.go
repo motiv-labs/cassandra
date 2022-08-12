@@ -5,7 +5,6 @@ import (
 	"github.com/gocql/gocql"
 	impulse_ctx "github.com/motiv-labs/impulse-ctx"
 	log "github.com/motiv-labs/logwrapper"
-	"github.com/opentracing/opentracing-go"
 	"strconv"
 	"time"
 )
@@ -57,23 +56,10 @@ type iterRetry struct {
 // Exec wrapper to retry around gocql Exec(). We have a retry approach in place + incremental approach used. For example:
 // First time it will wait 1 second, second time 2 seconds, ... It will depend on the values for retries and seconds to wait.
 func (q queryRetry) Exec(ctx context.Context) error {
-	var span opentracing.Span
 	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 	if !ok {
 		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
-		span = opentracing.StartSpan("Exec")
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Interface", "queryRetry")
-		impulseCtx.Span = span
-	} else {
-		span = opentracing.StartSpan("Exec", opentracing.ChildOf(impulseCtx.Span.Context()))
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Interface", "queryRetry")
-		impulseCtx.Span = span
 	}
-	ctx = context.WithValue(ctx, impulse_ctx.ImpulseCtxKey, impulseCtx)
 
 	log.Debug(impulseCtx, "running queryRetry Exec() method")
 
@@ -109,19 +95,11 @@ func (q queryRetry) Exec(ctx context.Context) error {
 // Scan wrapper to retry around gocql Scan(). We have a retry approach in place + incremental approach used. For example:
 // First time it will wait 1 second, second time 2 seconds, ... It will depend on the values for retries and seconds to wait.
 func (q queryRetry) Scan(ctx context.Context, dest ...interface{}) error {
-	var span opentracing.Span
 	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 	if !ok {
-		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
+		log.Error(impulseCtx, "ImpulseCtx isn't correct type")
 		return impulse_ctx.NewInvalidImpulseCtx("ImpulseCtx isn't correct type")
-	} else {
-		span = opentracing.StartSpan("Scan", opentracing.ChildOf(impulseCtx.Span.Context()))
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Interface", "queryRetry")
-		impulseCtx.Span = span
 	}
-	ctx = context.WithValue(ctx, impulse_ctx.ImpulseCtxKey, impulseCtx)
 
 	log.Debug(impulseCtx, "running queryRetry Scan() method")
 
@@ -157,23 +135,10 @@ func (q queryRetry) Scan(ctx context.Context, dest ...interface{}) error {
 
 // Iter just a wrapper to be able to call this method
 func (q queryRetry) Iter(ctx context.Context) IterInterface {
-	var span opentracing.Span
 	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 	if !ok {
 		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
-		span = opentracing.StartSpan("Iter")
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Interface", "queryRetry")
-		impulseCtx.Span = span
-	} else {
-		span = opentracing.StartSpan("Iter", opentracing.ChildOf(impulseCtx.Span.Context()))
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Interface", "queryRetry")
-		impulseCtx.Span = span
 	}
-	ctx = context.WithValue(ctx, impulse_ctx.ImpulseCtxKey, impulseCtx)
 
 	log.Debug(impulseCtx, "running queryRetry Iter() method")
 
@@ -182,23 +147,10 @@ func (q queryRetry) Iter(ctx context.Context) IterInterface {
 
 // PageState just a wrapper to be able to call this method
 func (q queryRetry) PageState(state []byte, ctx context.Context) QueryInterface {
-	var span opentracing.Span
 	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 	if !ok {
 		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
-		span = opentracing.StartSpan("PageState")
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Interface", "queryRetry")
-		impulseCtx.Span = span
-	} else {
-		span = opentracing.StartSpan("PageState", opentracing.ChildOf(impulseCtx.Span.Context()))
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Interface", "queryRetry")
-		impulseCtx.Span = span
 	}
-	ctx = context.WithValue(ctx, impulse_ctx.ImpulseCtxKey, impulseCtx)
 
 	log.Debug(impulseCtx, "running queryRetry PageState() method")
 
@@ -207,23 +159,10 @@ func (q queryRetry) PageState(state []byte, ctx context.Context) QueryInterface 
 
 // PageSize just a wrapper to be able to call this method
 func (q queryRetry) PageSize(n int, ctx context.Context) QueryInterface {
-	var span opentracing.Span
 	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 	if !ok {
 		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
-		span = opentracing.StartSpan("PageSize")
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Interface", "queryRetry")
-		impulseCtx.Span = span
-	} else {
-		span = opentracing.StartSpan("PageSize", opentracing.ChildOf(impulseCtx.Span.Context()))
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Interface", "queryRetry")
-		impulseCtx.Span = span
 	}
-	ctx = context.WithValue(ctx, impulse_ctx.ImpulseCtxKey, impulseCtx)
 
 	log.Debug(impulseCtx, "running queryRetry PageSize() method")
 
@@ -232,23 +171,10 @@ func (q queryRetry) PageSize(n int, ctx context.Context) QueryInterface {
 
 //
 func (i iterRetry) Scan(ctx context.Context, dest ...interface{}) bool {
-	var span opentracing.Span
 	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 	if !ok {
 		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
-		span = opentracing.StartSpan("Scan")
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Interface", "iterRetry")
-		impulseCtx.Span = span
-	} else {
-		span = opentracing.StartSpan("Scan", opentracing.ChildOf(impulseCtx.Span.Context()))
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Interface", "iterRetry")
-		impulseCtx.Span = span
 	}
-	ctx = context.WithValue(ctx, impulse_ctx.ImpulseCtxKey, impulseCtx)
 
 	log.Debug(impulseCtx, "running iterRetry Scan() method")
 
@@ -257,23 +183,10 @@ func (i iterRetry) Scan(ctx context.Context, dest ...interface{}) bool {
 
 // WillSwitchPage is just a wrapper to be able to call this method
 func (i iterRetry) WillSwitchPage(ctx context.Context) bool {
-	var span opentracing.Span
 	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 	if !ok {
 		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
-		span = opentracing.StartSpan("WillSwitchPage")
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Interface", "iterRetry")
-		impulseCtx.Span = span
-	} else {
-		span = opentracing.StartSpan("WillSwitchPage", opentracing.ChildOf(impulseCtx.Span.Context()))
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Interface", "iterRetry")
-		impulseCtx.Span = span
 	}
-	ctx = context.WithValue(ctx, impulse_ctx.ImpulseCtxKey, impulseCtx)
 
 	log.Debug(impulseCtx, "running iterRetry Close() method")
 
@@ -282,23 +195,10 @@ func (i iterRetry) WillSwitchPage(ctx context.Context) bool {
 
 // PageState is just a wrapper to be able to call this method
 func (i iterRetry) PageState(ctx context.Context) []byte {
-	var span opentracing.Span
 	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 	if !ok {
 		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
-		span = opentracing.StartSpan("PageState")
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Interface", "iterRetry")
-		impulseCtx.Span = span
-	} else {
-		span = opentracing.StartSpan("PageState", opentracing.ChildOf(impulseCtx.Span.Context()))
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Interface", "iterRetry")
-		impulseCtx.Span = span
 	}
-	ctx = context.WithValue(ctx, impulse_ctx.ImpulseCtxKey, impulseCtx)
 
 	log.Debug(impulseCtx, "running iterRetry PageState() method")
 
@@ -307,23 +207,10 @@ func (i iterRetry) PageState(ctx context.Context) []byte {
 
 // MapScan is just a wrapper to be able to call this method
 func (i iterRetry) MapScan(m map[string]interface{}, ctx context.Context) bool {
-	var span opentracing.Span
 	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 	if !ok {
 		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
-		span = opentracing.StartSpan("MapScan")
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Interface", "iterRetry")
-		impulseCtx.Span = span
-	} else {
-		span = opentracing.StartSpan("MapScan", opentracing.ChildOf(impulseCtx.Span.Context()))
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Interface", "iterRetry")
-		impulseCtx.Span = span
 	}
-	ctx = context.WithValue(ctx, impulse_ctx.ImpulseCtxKey, impulseCtx)
 
 	log.Debug(impulseCtx, "running iterRetry PageState() method")
 
@@ -332,19 +219,11 @@ func (i iterRetry) MapScan(m map[string]interface{}, ctx context.Context) bool {
 
 // Close is just a wrapper to be able to call this method
 func (i iterRetry) Close(ctx context.Context) error {
-	var span opentracing.Span
 	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 	if !ok {
-		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
+		log.Error(impulseCtx, "ImpulseCtx isn't correct type")
 		return impulse_ctx.NewInvalidImpulseCtx("ImpulseCtx isn't correct type")
-	} else {
-		span = opentracing.StartSpan("Close", opentracing.ChildOf(impulseCtx.Span.Context()))
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Interface", "iterRetry")
-		impulseCtx.Span = span
 	}
-	ctx = context.WithValue(ctx, impulse_ctx.ImpulseCtxKey, impulseCtx)
 
 	log.Debug(impulseCtx, "running iterRetry Close() method")
 
@@ -356,19 +235,11 @@ func (i iterRetry) Close(ctx context.Context) error {
 // First time it will wait 1 second, second time 2 seconds, ... It will depend on the values for retries
 // and seconds to wait.
 func (i iterRetry) ScanAndClose(ctx context.Context, handle func() bool, dest ...interface{}) error {
-	var span opentracing.Span
 	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 	if !ok {
-		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
+		log.Error(impulseCtx, "ImpulseCtx isn't correct type")
 		return impulse_ctx.NewInvalidImpulseCtx("ImpulseCtx isn't correct type")
-	} else {
-		span = opentracing.StartSpan("ScanAndClose", opentracing.ChildOf(impulseCtx.Span.Context()))
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Interface", "iterRetry")
-		impulseCtx.Span = span
 	}
-	ctx = context.WithValue(ctx, impulse_ctx.ImpulseCtxKey, impulseCtx)
 
 	retries := cassandraRetryAttempts
 	secondsToSleep := 0
