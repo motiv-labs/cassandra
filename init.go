@@ -14,7 +14,6 @@ import (
 
 	"github.com/gocql/gocql"
 	log "github.com/motiv-labs/logwrapper"
-	"github.com/opentracing/opentracing-go"
 )
 
 // Schema file to create keyspace if required
@@ -82,23 +81,10 @@ type sessionHolder struct {
 
 // New return a cassandra session Initializer
 func New(keyspace string, ctx context.Context) Initializer {
-	var span opentracing.Span
 	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 	if !ok {
 		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
-		span = opentracing.StartSpan("New")
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Package", "cassandra")
-		impulseCtx.Span = span
-	} else {
-		span = opentracing.StartSpan("New", opentracing.ChildOf(impulseCtx.Span.Context()))
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Package", "cassandra")
-		impulseCtx.Span = span
 	}
-	ctx = context.WithValue(ctx, impulse_ctx.ImpulseCtxKey, impulseCtx)
 
 	return sessionInitializer{
 		clusterHostName:     domain,
