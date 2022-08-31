@@ -104,7 +104,7 @@ Params:
 func (t timestamp) buildCassQuery(table, where, timeRangeColumn string, timeRangeIsUUID bool, start, end time.Time, limit int) string {
 	// todo build cassandra statement to be used in timestamp query
 	funcTime := time.Now()
-	println("function start time is ", funcTime)
+	println("function start time is ", funcTime.String())
 	// build initial select clause
 	selectClause := fmt.Sprintf("SELECT * FROM %s", table)
 
@@ -173,7 +173,7 @@ func (t timestamp) buildCassQuery(table, where, timeRangeColumn string, timeRang
 	// combine all clauses to create the query
 	query := strings.Join([]string{selectClause, whereClause, limitClause}, " ")
 
-	println("function end time is ", time.Now())
-	println("function total time is ", time.Since(funcTime))
+	println("function end time is ", time.Now().String())
+	println("function total time is ", time.Since(funcTime).String())
 	return query
 }
