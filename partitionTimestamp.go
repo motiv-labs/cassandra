@@ -14,14 +14,14 @@ type Timestamp interface {
 }
 
 type timestamp struct {
-	sessionRetry    sessionRetry
+	session         SessionInterface
 	duration        time.Duration
 	partitionColumn string
 }
 
-func NewTimestamp(s sessionRetry, duration time.Duration, partitionColumn string) Timestamp {
+func NewTimestamp(s SessionInterface, duration time.Duration, partitionColumn string) Timestamp {
 	return timestamp{
-		sessionRetry:    s,
+		session:         s,
 		duration:        duration,
 		partitionColumn: partitionColumn,
 	}
@@ -69,7 +69,7 @@ func (t timestamp) PartitionTimestampQuery(ctx context.Context, table, where, ti
 	// todo build statement
 	query := t.buildCassQuery(table, where, timeRangeColumn, timeRangeIsUUID, start, end, limit)
 	// todo perform query
-	iter := t.sessionRetry.Query(ctx, query).Iter(ctx)
+	iter := t.session.Query(ctx, query).Iter(ctx)
 
 	var record interface{}
 	var recordList []interface{}
