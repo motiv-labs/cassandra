@@ -69,7 +69,7 @@ func (t timestamp) PartitionTimestampQuery(ctx context.Context, table, where, ti
 
 	// todo check limit and record list length and loop accordingly.
 	var recordList []map[string]interface{}
-	var startTime time.Time
+	startTime := start
 
 	for len(recordList) < limit && startTime.Before(end) {
 		innerRecordList, err := t.performQuery(ctx, table, where, timeRangeColumn, timeRangeIsUUID, startTime, end, limit)
