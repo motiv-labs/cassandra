@@ -39,17 +39,8 @@ func (t timestamp) CreatePartitionTimestampValue() int64 {
 	// todo create the partition value based on the timestamp and unix value
 	// todo upgrade go versions everywhere to use unix milli or micro
 	var unixTime int64
-	switch t.duration {
-	//case time.Millisecond:
-	//	unixTime = time.Now().UnixMilli()
-	//case time.Microsecond:
-	//	unixTime = time.Now().UnixMicro()
-	case time.Nanosecond:
-		unixTime = time.Now().UnixNano()
-	default: // default to seconds
-		unixTime = time.Now().Unix()
-	}
-
+	// for now, only use seconds. future updates can allow for options.
+	unixTime = time.Now().Unix()
 	return unixTime
 }
 
@@ -70,6 +61,7 @@ func (t timestamp) PartitionTimestampQuery(ctx context.Context, table, where, ti
 		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
 	}
 	// todo build statement
+	// todo check limit and record list length and loop accordingly.
 	query := t.buildCassQuery(table, where, timeRangeColumn, timeRangeIsUUID, start, end, limit)
 	// todo perform query
 	iter := t.session.Query(ctx, query).Iter(ctx)
@@ -113,30 +105,21 @@ func (t timestamp) buildCassQuery(table, where, timeRangeColumn string, timeRang
 	// todo upgrade go versions everywhere to use unix milli or micro
 	var startTime int64
 	var endTime int64
-	switch t.duration {
-	//case time.Millisecond:
-	//	startTime = start.UnixMilli()
-	//	endTime = end.UnixMilli()
-	//case time.Microsecond:
-	//	startTime = start.UnixMicro()
-	//	endTime = end.UnixMilli()
-	case time.Nanosecond:
-		startTime = start.UnixNano()
-		endTime = end.UnixNano()
-	default: // default to seconds
-		startTime = start.Unix()
-		endTime = end.Unix()
-	}
-
+	// for now, only use seconds. future updates can allow variability
+	startTime = start.Unix()
+	endTime = end.Unix()
 	// open in clause
 	inClause := "IN ("
 
-	// todo understand and fix this int64 conversion logic based on https://github.com/hailocab/gocassa/blob/master/timeseries_table.go#L51
-	// t.duration/t.duration will always be 1 micro second * 1000.
-	// divide chosen duration by second for variable timing.
-	fmt.Printf("calculated endtime is %d", endTime*1000)
-	for i := startTime; ; i += int64(t.duration/time.Second) * 1000 {
-		if i >= endTime*1000 {
+	// based on https://github.com/hailocab/gocassa/blob/master/timeseries_table.go#L51
+	// note: t.duration/t.duration will always be 1 micro second * 1000.
+	// increment by 1 because we can save ever second
+	et := endTime * 1000
+	fmt.Printf("calculated endtime is %d\n", et)
+
+	for i := startTime; ; i++ { // increment each second
+		// todo add 300 values limit.
+		if i >= endTime {
 			break
 		}
 		if i == startTime {
