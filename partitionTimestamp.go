@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gocql/gocql"
+	"github.com/mitchellh/mapstructure"
 	impulse_ctx "github.com/motiv-labs/impulse-ctx"
 	log "github.com/motiv-labs/logwrapper"
 	"strings"
@@ -206,6 +207,31 @@ func ConvertSliceMap(ctx context.Context, sliceMap []map[string]interface{}, v i
 	err = json.Unmarshal(jsonStr, &v)
 	if err != nil {
 		log.Errorf(impulseCtx, "error unmarshaling slice map %v", err)
+		return err
+	}
+
+	return nil
+}
+
+/*
+ConvertSliceMapWithMapStructure is used to convert a slice map returned from gocql into the passed in struct using the tag "mapstructure" to convert column names to each attribute
+This can be used in tandem with PartitionTimestampQuery to convert teh record list into a specific slice structure.
+*/
+func ConvertSliceMapWithMapStructure(ctx context.Context, sliceMap []map[string]interface{}, v interface{}) error {
+	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
+	if !ok {
+		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
+	}
+
+	jsonStr, err := json.Marshal(sliceMap)
+	if err != nil {
+		log.Errorf(impulseCtx, "error encoding slice map %v", err)
+		return err
+	}
+
+	err = mapstructure.Decode(jsonStr, &v) // note: I don't think this is actually a decoder, just an unmarshaller.
+	if err != nil {
+		log.Errorf(impulseCtx, "error decoding slice map %v", err)
 		return err
 	}
 
