@@ -134,7 +134,11 @@ func (t timestamp) buildCassQuery(table, where, timeRangeColumn string, timeRang
 	// todo understand and fix this int64 conversion logic based on https://github.com/hailocab/gocassa/blob/master/timeseries_table.go#L51
 	// t.duration/t.duration will always be 1 micro second * 1000.
 	// divide chosen duration by second for variable timing.
-	for i := startTime; i >= endTime*1000; i += int64(t.duration/time.Second) * 1000 {
+	fmt.Printf("calculated endtime is %d", endTime*1000)
+	for i := startTime; ; i += int64(t.duration/time.Second) * 1000 {
+		if i >= endTime*1000 {
+			break
+		}
 		if i == startTime {
 			// first option, don't add comma
 			inClause = fmt.Sprintf("%s%d", inClause, i)
