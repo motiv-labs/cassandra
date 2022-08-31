@@ -11,6 +11,8 @@ import (
 )
 
 type Timestamp interface {
+	CreatePartitionTimestampValue() int64
+	PartitionTimestampQuery(ctx context.Context, table, where, timeRangeColumn string, timeRangeIsUUID bool, start, end time.Time, limit int) []interface{}
 }
 
 type timestamp struct {
