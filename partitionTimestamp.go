@@ -143,7 +143,7 @@ func (t timestamp) buildCassQuery(table, where, timeRangeColumn string, timeRang
 	// increment by 1 because we can save ever second
 
 	for i, iterations := startTime, 0; ; i, iterations = i+1, iterations+1 { // increment each second
-		if i >= endTime || iterations >= inClauseLimit { // either we've reached the time range or the max amount of values for the in clause was reached
+		if i > endTime || iterations > inClauseLimit { // either we've reached the time range or the max amount of values for the in clause was reached
 			break
 		}
 		if i == startTime {
