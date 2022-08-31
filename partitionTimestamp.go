@@ -3,6 +3,7 @@ package cassandra
 import (
 	"context"
 	"fmt"
+	"github.com/gocql/gocql"
 	impulse_ctx "github.com/motiv-labs/impulse-ctx"
 	log "github.com/motiv-labs/logwrapper"
 	"strings"
@@ -13,14 +14,16 @@ type Timestamp interface {
 }
 
 type timestamp struct {
-	sessionRetry sessionRetry
-	duration     time.Duration
+	sessionRetry    sessionRetry
+	duration        time.Duration
+	partitionColumn string
 }
 
-func NewTimestamp(s sessionRetry, duration time.Duration) Timestamp {
+func NewTimestamp(s sessionRetry, duration time.Duration, partitionColumn string) Timestamp {
 	return timestamp{
-		sessionRetry: s,
-		duration:     duration,
+		sessionRetry:    s,
+		duration:        duration,
+		partitionColumn: partitionColumn,
 	}
 }
 
@@ -58,15 +61,30 @@ Params:
 	end: end time to query by
 	limit: the number of records to look for and return
 */
-func (t timestamp) PartitionTimestampQuery(ctx context.Context, table, where, timeRangeColumn string, start, end time.Time, limit int) []interface{} {
+func (t timestamp) PartitionTimestampQuery(ctx context.Context, table, where, timeRangeColumn string, timeRangeIsUUID bool, start, end time.Time, limit int) []interface{} {
 	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 	if !ok {
 		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
 	}
 	// todo build statement
-	query := t.buildCassQuery(table, where, timeRangeColumn, start, end, limit)
+	query := t.buildCassQuery(table, where, timeRangeColumn, timeRangeIsUUID, start, end, limit)
 	// todo perform query
-	// todo repeat query to next partition if limit is not met
+	iter := t.sessionRetry.Query(ctx, query).Iter(ctx)
+
+	var record interface{}
+	var recordList []interface{}
+
+	err := iter.ScanAndClose(ctx, func() bool {
+		recordList = append(recordList, record)
+		return true
+	}, &record)
+
+	if err != nil {
+		log.Errorf(impulseCtx, "error while querying table %s", table)
+	} else {
+		log.Debugf(impulseCtx, "successfully returning record list from table %s", table)
+	}
+	// todo may need to repeat query to next partition if limit is not met
 	return nil
 }
 
@@ -80,7 +98,7 @@ Params:
 	end: end time to query by
 	limit: the number of records to look for and return
 */
-func (t timestamp) buildCassQuery(table, where, timeRangeColumn string, start, end time.Time, limit int) string {
+func (t timestamp) buildCassQuery(table, where, timeRangeColumn string, timeRangeIsUUID bool, start, end time.Time, limit int) string {
 	// todo build cassandra statement to be used in timestamp query
 	// build initial select clause
 	selectClause := fmt.Sprintf("SELECT * FROM %s", table)
@@ -101,28 +119,39 @@ func (t timestamp) buildCassQuery(table, where, timeRangeColumn string, start, e
 		endTime = end.UnixMilli()
 	default: // default to seconds
 		startTime = start.Unix()
-		endTime = end.UnixMilli()
+		endTime = end.Unix()
 	}
 
 	// open in clause
 	inClause := "IN ("
 
 	// todo understand and fix this int64 conversion logic based on https://github.com/hailocab/gocassa/blob/master/timeseries_table.go#L51
-	for i := startTime; ; i += int64(t.duration/t.duration) * 1000 {
-		if i >= endTime*1000 {
-			break
-		}
-		// todo fix this append
-		if i+int64(t.duration/t.duration)*1000 >= endTime*1000 {
-			inClause = fmt.Sprintf("%s")
+	// t.duration/t.duration will always be 1 micro second * 1000.
+	// divide chosen duration by second for variable timing.
+	for i := startTime; i >= endTime*1000; i += int64(t.duration/time.Second) * 1000 {
+		// add next partition key
+		inClause = fmt.Sprintf("%s", inClause)
+		if i+int64(t.duration/time.Second)*1000 >= endTime*1000 {
+			// do nothing if next iteration breaks loop
 		} else {
-			inClause = fmt.Sprintf("%s")
+			// add comma to continue appending
+			inClause = fmt.Sprintf("%s,", inClause)
 		}
 	}
 	// close in clause
 	inClause = fmt.Sprintf("%s)", inClause)
 
-	whereClause := fmt.Sprintf("WHERE %s %s", timeRangeColumn, inClause)
+	// build time range clause
+	var timeRangeClause string
+	if timeRangeIsUUID {
+		startUUID := gocql.UUIDFromTime(start)
+		endUUID := gocql.UUIDFromTime(end)
+		timeRangeClause = fmt.Sprintf("%s > %s AND %s < %s", timeRangeColumn, startUUID.String(), timeRangeColumn, endUUID.String())
+	} else {
+		timeRangeClause = fmt.Sprintf("%s > '%s' AND %s < '%s'", timeRangeColumn, start.String(), timeRangeColumn, end.String())
+	}
+
+	whereClause := fmt.Sprintf("WHERE %s %s AND %s", t.partitionColumn, inClause, timeRangeClause)
 	if where != "" {
 		whereClause = fmt.Sprintf("%s AND %s", whereClause, where)
 	}
