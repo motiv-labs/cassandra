@@ -134,13 +134,13 @@ func (t timestamp) buildCassQuery(table, where, timeRangeColumn string, timeRang
 	// divide chosen duration by second for variable timing.
 	for i := startTime; i <= endTime*1000; i += int64(t.duration/time.Second) * 1000 {
 		// add next partition key
-		inClause = fmt.Sprintf("%s", inClause)
-		if i+int64(t.duration/time.Second)*1000 <= endTime*1000 {
-			// do nothing if next iteration breaks loop
-		} else {
-			// add comma to continue appending
-			inClause = fmt.Sprintf("%s,", inClause)
-		}
+		inClause = fmt.Sprintf("%s, %d", inClause, i)
+		//if i+int64(t.duration/time.Second)*1000 <= endTime*1000 {
+		//	// do nothing if next iteration breaks loop
+		//} else {
+		//	// add comma to continue appending
+		//	inClause = fmt.Sprintf("%s,", inClause)
+		//}
 	}
 	// close in clause
 	inClause = fmt.Sprintf("%s)", inClause)
