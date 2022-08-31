@@ -71,7 +71,7 @@ func (t timestamp) PartitionTimestampQuery(ctx context.Context, table, where, ti
 	var recordList []map[string]interface{}
 	startTime := start
 
-	for len(recordList) < limit && startTime.Before(end) {
+	for (len(recordList) < limit || limit < 0) && startTime.Before(end) {
 		innerRecordList, err := t.performQuery(ctx, table, where, timeRangeColumn, timeRangeIsUUID, startTime, end, limit)
 		if err != nil {
 			log.Errorf(impulseCtx, "error performing query %v", err)
