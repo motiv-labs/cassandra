@@ -11,6 +11,10 @@ import (
 	"time"
 )
 
+const (
+	inClauseLimit = 300
+)
+
 type Timestamp interface {
 	CreatePartitionTimestampValue() int64
 	PartitionTimestampQuery(ctx context.Context, table, where, timeRangeColumn string, timeRangeIsUUID bool, start, end time.Time, limit int) ([]map[string]interface{}, error)
@@ -47,6 +51,7 @@ func (t timestamp) CreatePartitionTimestampValue() int64 {
 
 /*
 PartitionTimestampQuery will query across timestamp based partitions for as many records as match the limit
+Table is assumed to be in ascending order
 Params:
 	ctx: context object with ImpulseCtx struct for logging and query functions
 	table: the table to query
@@ -61,10 +66,36 @@ func (t timestamp) PartitionTimestampQuery(ctx context.Context, table, where, ti
 	if !ok {
 		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
 	}
-	// todo build statement
+
 	// todo check limit and record list length and loop accordingly.
+	var recordList []map[string]interface{}
+	var startTime time.Time
+
+	for len(recordList) < limit && startTime.Before(end) {
+		innerRecordList, err := t.performQuery(ctx, table, where, timeRangeColumn, timeRangeIsUUID, startTime, end, limit)
+		if err != nil {
+			log.Errorf(impulseCtx, "error performing query %v", err)
+			return recordList, err
+		}
+		// add newly returned records to larger list
+		recordList = append(recordList, innerRecordList...)
+
+		// update start time based on in limit
+		// atm everything is only ever based in seconds.
+		startTime = startTime.Add(time.Duration(inClauseLimit) * time.Second)
+	}
+
+	return recordList, nil
+}
+
+func (t timestamp) performQuery(ctx context.Context, table, where, timeRangeColumn string, timeRangeIsUUID bool, start, end time.Time, limit int) ([]map[string]interface{}, error) {
+	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
+	if !ok {
+		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
+	}
+
 	query := t.buildCassQuery(table, where, timeRangeColumn, timeRangeIsUUID, start, end, limit)
-	// todo perform query
+
 	iter := t.session.Query(ctx, query).Iter(ctx)
 
 	var recordList []map[string]interface{}
@@ -77,7 +108,7 @@ func (t timestamp) PartitionTimestampQuery(ctx context.Context, table, where, ti
 	} else {
 		log.Debugf(impulseCtx, "successfully returning record list from table %s", table)
 	}
-	// todo may need to repeat query to next partition if limit is not met
+
 	return recordList, err
 }
 
@@ -92,9 +123,7 @@ Params:
 	limit: the number of records to look for and return
 */
 func (t timestamp) buildCassQuery(table, where, timeRangeColumn string, timeRangeIsUUID bool, start, end time.Time, limit int) string {
-	// todo build cassandra statement to be used in timestamp query
 	funcTime := time.Now()
-	println("function start time is ", funcTime.String())
 	// build initial select clause
 	selectClause := fmt.Sprintf("SELECT * FROM %s", table)
 
@@ -112,12 +141,9 @@ func (t timestamp) buildCassQuery(table, where, timeRangeColumn string, timeRang
 	// based on https://github.com/hailocab/gocassa/blob/master/timeseries_table.go#L51
 	// note: t.duration/t.duration will always be 1 micro second * 1000.
 	// increment by 1 because we can save ever second
-	et := endTime * 1000
-	fmt.Printf("calculated endtime is %d\n", et)
 
-	for i := startTime; ; i++ { // increment each second
-		// todo add 300 values limit.
-		if i >= endTime {
+	for i, iterations := startTime, 0; ; i, iterations = i+1, iterations+1 { // increment each second
+		if i >= endTime || iterations >= inClauseLimit { // either we've reached the time range or the max amount of values for the in clause was reached
 			break
 		}
 		if i == startTime {
@@ -157,7 +183,6 @@ func (t timestamp) buildCassQuery(table, where, timeRangeColumn string, timeRang
 	// combine all clauses to create the query
 	query := strings.Join([]string{selectClause, whereClause, limitClause}, " ")
 
-	println("function end time is ", time.Now().String())
 	println("function total time is ", time.Since(funcTime).String())
 	return query
 }
@@ -171,6 +196,32 @@ func ConvertSliceMap(ctx context.Context, sliceMap []map[string]interface{}, v i
 	if !ok {
 		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
 	}
+
+	jsonStr, err := json.Marshal(sliceMap)
+	if err != nil {
+		log.Errorf(impulseCtx, "error marshaling slice map %v", err)
+		return err
+	}
+
+	err = json.Unmarshal(jsonStr, &v)
+	if err != nil {
+		log.Errorf(impulseCtx, "error unmarshaling slice map %v", err)
+		return err
+	}
+
+	return nil
+}
+
+func ConvertSliceMapWithArg(ctx context.Context, sliceMap []map[string]interface{}, v interface{}, keyConvertMap map[string]string) error {
+	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
+	if !ok {
+		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
+	}
+
+	//keyConvertedSliceMap := make([]map[string]interface{}, len(sliceMap))
+	//for k, v := range keyConvertMap {
+	// todo write this key conversion logic
+	//}
 
 	jsonStr, err := json.Marshal(sliceMap)
 	if err != nil {
