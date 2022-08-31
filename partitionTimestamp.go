@@ -223,13 +223,13 @@ func ConvertSliceMapWithMapStructure(ctx context.Context, sliceMap []map[string]
 		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
 	}
 
-	jsonStr, err := json.Marshal(sliceMap)
-	if err != nil {
-		log.Errorf(impulseCtx, "error encoding slice map %v", err)
-		return err
-	}
+	//jsonStr, err := json.Marshal(sliceMap)
+	//if err != nil {
+	//	log.Errorf(impulseCtx, "error encoding slice map %v", err)
+	//	return err
+	//}
 
-	err = mapstructure.Decode(jsonStr, &v) // note: I don't think this is actually a decoder, just an unmarshaller.
+	err := mapstructure.Decode(sliceMap, &v) // note: I don't think this is actually a decoder, just an unmarshaller.
 	if err != nil {
 		log.Errorf(impulseCtx, "error decoding slice map %v", err)
 		return err
