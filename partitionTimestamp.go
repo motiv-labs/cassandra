@@ -12,7 +12,7 @@ import (
 
 type Timestamp interface {
 	CreatePartitionTimestampValue() int64
-	PartitionTimestampQuery(ctx context.Context, table, where, timeRangeColumn string, timeRangeIsUUID bool, start, end time.Time, limit int) []interface{}
+	PartitionTimestampQuery(ctx context.Context, table, where, timeRangeColumn string, timeRangeIsUUID bool, start, end time.Time, limit int) ([]interface{}, error)
 }
 
 type timestamp struct {
@@ -63,7 +63,7 @@ Params:
 	end: end time to query by
 	limit: the number of records to look for and return
 */
-func (t timestamp) PartitionTimestampQuery(ctx context.Context, table, where, timeRangeColumn string, timeRangeIsUUID bool, start, end time.Time, limit int) []interface{} {
+func (t timestamp) PartitionTimestampQuery(ctx context.Context, table, where, timeRangeColumn string, timeRangeIsUUID bool, start, end time.Time, limit int) ([]interface{}, error) {
 	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 	if !ok {
 		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
@@ -87,7 +87,7 @@ func (t timestamp) PartitionTimestampQuery(ctx context.Context, table, where, ti
 		log.Debugf(impulseCtx, "successfully returning record list from table %s", table)
 	}
 	// todo may need to repeat query to next partition if limit is not met
-	return nil
+	return recordList, err
 }
 
 /*
