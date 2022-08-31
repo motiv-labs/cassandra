@@ -330,6 +330,63 @@ func (i iterRetry) MapScan(m map[string]interface{}, ctx context.Context) bool {
 	return i.goCqlIter.MapScan(m)
 }
 
+/*
+SliceMapAndClose runs gocql.Iter.SliceMap and gocql.Iter.Close
+*/
+func (i iterRetry) SliceMapAndClose(ctx context.Context) ([]map[string]interface{}, error) {
+	var span opentracing.Span
+	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
+	if !ok {
+		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
+		span = opentracing.StartSpan("SliceMapAndClose")
+		defer span.Finish()
+		span.SetTag("Module", "cassandra")
+		span.SetTag("Interface", "iterRetry")
+		impulseCtx.Span = span
+	} else {
+		span = opentracing.StartSpan("SliceMapAndClose", opentracing.ChildOf(impulseCtx.Span.Context()))
+		defer span.Finish()
+		span.SetTag("Module", "cassandra")
+		span.SetTag("Interface", "iterRetry")
+		impulseCtx.Span = span
+	}
+	ctx = context.WithValue(ctx, impulse_ctx.ImpulseCtxKey, impulseCtx)
+
+	retries := cassandraRetryAttempts
+	secondsToSleep := 0
+
+	var sliceMap []map[string]interface{}
+	var err error
+
+	attempts := 1
+	for attempts <= retries {
+
+		// Scan consumes the next row of the iterator and copies the columns of the
+		// current row into the values pointed at by dest.
+		sliceMap, err = i.goCqlIter.SliceMap()
+
+		// we will try to run the method several times until attempts is met
+		if err = i.goCqlIter.Close(); err != nil {
+
+			log.Warnf(impulseCtx, "error when running Close(): %v, attempt: %d / %d", err, attempts, retries)
+
+			// incremental sleep
+			secondsToSleep += cassandraSecondsToSleepIncrement
+
+			log.Warnf(impulseCtx, "sleeping for %d second", secondsToSleep)
+
+			time.Sleep(time.Duration(secondsToSleep) * time.Second)
+		} else {
+			// in case the error is nil, we stop and return
+			return sliceMap, err
+		}
+
+		attempts++
+	}
+
+	return sliceMap, err
+}
+
 // Close is just a wrapper to be able to call this method
 func (i iterRetry) Close(ctx context.Context) error {
 	var span opentracing.Span

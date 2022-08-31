@@ -2,6 +2,7 @@ package cassandra
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/gocql/gocql"
 	impulse_ctx "github.com/motiv-labs/impulse-ctx"
@@ -12,7 +13,7 @@ import (
 
 type Timestamp interface {
 	CreatePartitionTimestampValue() int64
-	PartitionTimestampQuery(ctx context.Context, table, where, timeRangeColumn string, timeRangeIsUUID bool, start, end time.Time, limit int) ([]interface{}, error)
+	PartitionTimestampQuery(ctx context.Context, table, where, timeRangeColumn string, timeRangeIsUUID bool, start, end time.Time, limit int) ([]map[string]interface{}, error)
 }
 
 type timestamp struct {
@@ -55,7 +56,7 @@ Params:
 	end: end time to query by
 	limit: the number of records to look for and return
 */
-func (t timestamp) PartitionTimestampQuery(ctx context.Context, table, where, timeRangeColumn string, timeRangeIsUUID bool, start, end time.Time, limit int) ([]interface{}, error) {
+func (t timestamp) PartitionTimestampQuery(ctx context.Context, table, where, timeRangeColumn string, timeRangeIsUUID bool, start, end time.Time, limit int) ([]map[string]interface{}, error) {
 	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 	if !ok {
 		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
@@ -66,13 +67,10 @@ func (t timestamp) PartitionTimestampQuery(ctx context.Context, table, where, ti
 	// todo perform query
 	iter := t.session.Query(ctx, query).Iter(ctx)
 
-	var record interface{}
-	var recordList []interface{}
+	var recordList []map[string]interface{}
+	var err error
 
-	err := iter.ScanAndClose(ctx, func() bool {
-		recordList = append(recordList, record)
-		return true
-	}, &record)
+	recordList, err = iter.SliceMapAndClose(ctx)
 
 	if err != nil {
 		log.Errorf(impulseCtx, "error while querying table %s", table)
@@ -162,4 +160,29 @@ func (t timestamp) buildCassQuery(table, where, timeRangeColumn string, timeRang
 	println("function end time is ", time.Now().String())
 	println("function total time is ", time.Since(funcTime).String())
 	return query
+}
+
+/*
+ConvertSliceMap is used to convert a slice map returned from gocql into the passed in struct.
+This can be used in tandem with PartitionTimestampQuery to convert teh record list into a specific slice structure.
+*/
+func ConvertSliceMap(ctx context.Context, sliceMap []map[string]interface{}, v interface{}) error {
+	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
+	if !ok {
+		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
+	}
+
+	jsonStr, err := json.Marshal(sliceMap)
+	if err != nil {
+		log.Errorf(impulseCtx, "error marshaling slice map %v", err)
+		return err
+	}
+
+	err = json.Unmarshal(jsonStr, &v)
+	if err != nil {
+		log.Errorf(impulseCtx, "error unmarshaling slice map %v", err)
+		return err
+	}
+
+	return nil
 }
