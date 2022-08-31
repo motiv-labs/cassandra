@@ -159,7 +159,12 @@ func (t timestamp) buildCassQuery(table, where, timeRangeColumn string, timeRang
 	}
 
 	// build limit clause
-	limitClause := fmt.Sprintf("LIMIT %d", limit)
+	var limitClause string
+	// if the limit is -1, that means we don't need a limit, that's the reason of the blank statement
+	if limit > 0 {
+		// if the limit is > 0, it means that we need a valid number to pass to cassandra
+		limitClause = fmt.Sprintf("LIMIT %d", limit)
+	}
 
 	// combine all clauses to create the query
 	query := strings.Join([]string{selectClause, whereClause, limitClause}, " ")
