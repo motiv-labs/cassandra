@@ -19,6 +19,7 @@ const (
 
 type Timestamp interface {
 	CreatePartitionTimestampValue() int64
+	CreatePartitionTimestampValueFromTime(timestamp time.Time) int64
 	PartitionTimestampQuery(ctx context.Context, table, where, timeRangeColumn string, timeRangeIsUUID bool, start, end time.Time, limit int) ([]map[string]interface{}, error)
 }
 
