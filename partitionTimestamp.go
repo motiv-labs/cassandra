@@ -161,12 +161,15 @@ func (t timestamp) buildCassQuery(table, where, timeRangeColumn string, timeRang
 
 	// build time range clause
 	var timeRangeClause string
-	if timeRangeIsUUID {
-		startUUID := gocql.UUIDFromTime(start)
-		endUUID := gocql.UUIDFromTime(end)
-		timeRangeClause = fmt.Sprintf("%s > %s AND %s < %s", timeRangeColumn, startUUID.String(), timeRangeColumn, endUUID.String())
-	} else {
-		timeRangeClause = fmt.Sprintf("%s > '%s' AND %s < '%s'", timeRangeColumn, start.String(), timeRangeColumn, end.String())
+	if timeRangeColumn != "" { // only build the clause if a time range column was passed in
+		// difference in clauses are based on the logger service's pattern prior to 9/1/2022
+		if timeRangeIsUUID {
+			startUUID := gocql.UUIDFromTime(start)
+			endUUID := gocql.UUIDFromTime(end)
+			timeRangeClause = fmt.Sprintf("%s > %s AND %s <= %s", timeRangeColumn, startUUID.String(), timeRangeColumn, endUUID.String())
+		} else {
+			timeRangeClause = fmt.Sprintf("%s >= '%s' AND %s <= '%s'", timeRangeColumn, start.String(), timeRangeColumn, end.String())
+		}
 	}
 
 	whereClause := fmt.Sprintf("WHERE %s %s AND %s", t.partitionColumn, inClause, timeRangeClause)
