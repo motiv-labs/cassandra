@@ -37,10 +37,8 @@ func NewTimestamp(s SessionInterface, duration time.Duration, partitionColumn st
 }
 
 /*
-CreatePartitionTimestampValue will create a value based on passed in unix time
+CreatePartitionTimestampValue will create a unix timestamp value based for the current second
 This value can be used as the value for a partition key
-Params:
-	unixTime: the unix time to use
 */
 func (t timestamp) CreatePartitionTimestampValue() int64 {
 	// todo create the partition value based on the timestamp and unix value
@@ -48,6 +46,21 @@ func (t timestamp) CreatePartitionTimestampValue() int64 {
 	var unixTime int64
 	// for now, only use seconds. future updates can allow for options.
 	unixTime = time.Now().Unix()
+	return unixTime
+}
+
+/*
+CreatePartitionTimestampValueFromTime will create a unix timestamp value based on the passed in timestamp
+This value can be used as the value for a partition key
+Params:
+	timestamp: the timestamp to create a unix time from
+*/
+func (t timestamp) CreatePartitionTimestampValueFromTime(timestamp time.Time) int64 {
+	// todo create the partition value based on the timestamp and unix value
+	// todo upgrade go versions everywhere to use unix milli or micro
+	var unixTime int64
+	// for now, only use seconds. future updates can allow for options.
+	unixTime = timestamp.Unix()
 	return unixTime
 }
 
@@ -167,7 +180,7 @@ func (t timestamp) buildCassQuery(table, where, timeRangeColumn string, timeRang
 		if timeRangeIsUUID {
 			startUUID := gocql.UUIDFromTime(start)
 			endUUID := gocql.UUIDFromTime(end)
-			timeRangeClause = fmt.Sprintf("%s > %s AND %s <= %s", timeRangeColumn, startUUID.String(), timeRangeColumn, endUUID.String())
+			timeRangeClause = fmt.Sprintf("%s >= %s AND %s <= %s", timeRangeColumn, startUUID.String(), timeRangeColumn, endUUID.String())
 		} else {
 			timeRangeClause = fmt.Sprintf("%s >= '%s' AND %s <= '%s'", timeRangeColumn, start.String(), timeRangeColumn, end.String())
 		}
