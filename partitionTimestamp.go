@@ -110,7 +110,7 @@ func (t timestamp) performQuery(ctx context.Context, table, where, timeRangeColu
 		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
 	}
 
-	query := t.buildCassQuery(table, where, timeRangeColumn, timeRangeIsUUID, start, end, limit)
+	query := t.buildCassQuery(ctx, table, where, timeRangeColumn, timeRangeIsUUID, start, end, limit)
 
 	iter := t.session.Query(ctx, query).Iter(ctx)
 
@@ -138,7 +138,11 @@ Params:
 	end: end time to query by
 	limit: the number of records to look for and return
 */
-func (t timestamp) buildCassQuery(table, where, timeRangeColumn string, timeRangeIsUUID bool, start, end time.Time, limit int) string {
+func (t timestamp) buildCassQuery(ctx context.Context, table, where, timeRangeColumn string, timeRangeIsUUID bool, start, end time.Time, limit int) string {
+	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
+	if !ok {
+		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
+	}
 	funcTime := time.Now()
 	// build initial select clause
 	selectClause := fmt.Sprintf("SELECT * FROM %s", table)
@@ -205,7 +209,7 @@ func (t timestamp) buildCassQuery(table, where, timeRangeColumn string, timeRang
 	// combine all clauses to create the query
 	query := strings.Join([]string{selectClause, whereClause, limitClause}, " ")
 
-	println("function total time is ", time.Since(funcTime).String())
+	log.Debugf(impulseCtx, "function total time is ", time.Since(funcTime).String())
 	return query
 }
 
