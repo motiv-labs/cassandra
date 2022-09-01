@@ -42,7 +42,7 @@ CreatePartitionTimestampValue will create a unix timestamp value based for the c
 This value can be used as the value for a partition key
 */
 func (t timestamp) CreatePartitionTimestampValue() int64 {
-	// todo create the partition value based on the timestamp and unix value
+	// todo create the partition value based on the unix value
 	// todo upgrade go versions everywhere to use unix milli or micro
 	var unixTime int64
 	// for now, only use seconds. future updates can allow for options.
@@ -71,7 +71,7 @@ Table is assumed to be in ascending order
 Params:
 	ctx: context object with ImpulseCtx struct for logging and query functions
 	table: the table to query
-	where: where clause and additional options to pass the query
+	where: partial where clause and additional options to pass the query. do not include keywords WHERE, ORDER BY, or LIMIT
 	timeRangeColumn: the name of the column to use a time range on
 	start: start time to query by
 	end: end time to query by
@@ -83,7 +83,6 @@ func (t timestamp) PartitionTimestampQuery(ctx context.Context, table, where, ti
 		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
 	}
 
-	// todo check limit and record list length and loop accordingly.
 	var recordList []map[string]interface{}
 	startTime := start
 
@@ -132,7 +131,7 @@ func (t timestamp) performQuery(ctx context.Context, table, where, timeRangeColu
 buildCassQuery will build the cassandra statement for a partition timestamp query
 Params:
 	table: the table to query
-	where: where clause and additional options to pass the query
+	where: partial where clause and additional options to pass the query. do not include keywords WHERE, ORDER BY, or LIMIT
 	timeRangeColumn: the name of the column to use a time range on
 	start: start time to query by
 	end: end time to query by
@@ -248,12 +247,6 @@ func ConvertSliceMapWithMapStructure(ctx context.Context, sliceMap []map[string]
 		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
 	}
 
-	//jsonStr, err := json.Marshal(sliceMap)
-	//if err != nil {
-	//	log.Errorf(impulseCtx, "error encoding slice map %v", err)
-	//	return err
-	//}
-
 	err := CustomDecode(sliceMap, &v) // note: I don't think this is actually a decoder, just an unmarshaller.
 	if err != nil {
 		log.Errorf(impulseCtx, "error decoding slice map %v", err)
@@ -263,31 +256,31 @@ func ConvertSliceMapWithMapStructure(ctx context.Context, sliceMap []map[string]
 	return nil
 }
 
-func ConvertSliceMapWithArg(ctx context.Context, sliceMap []map[string]interface{}, v interface{}, keyConvertMap map[string]string) error {
-	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
-	if !ok {
-		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
-	}
-
-	//keyConvertedSliceMap := make([]map[string]interface{}, len(sliceMap))
-	//for k, v := range keyConvertMap {
-	// todo write this key conversion logic
-	//}
-
-	jsonStr, err := json.Marshal(sliceMap)
-	if err != nil {
-		log.Errorf(impulseCtx, "error marshaling slice map %v", err)
-		return err
-	}
-
-	err = json.Unmarshal(jsonStr, &v)
-	if err != nil {
-		log.Errorf(impulseCtx, "error unmarshaling slice map %v", err)
-		return err
-	}
-
-	return nil
-}
+//func ConvertSliceMapWithArg(ctx context.Context, sliceMap []map[string]interface{}, v interface{}, keyConvertMap map[string]string) error {
+//	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
+//	if !ok {
+//		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
+//	}
+//
+//	//keyConvertedSliceMap := make([]map[string]interface{}, len(sliceMap))
+//	//for k, v := range keyConvertMap {
+//	// todo write this key conversion logic
+//	//}
+//
+//	jsonStr, err := json.Marshal(sliceMap)
+//	if err != nil {
+//		log.Errorf(impulseCtx, "error marshaling slice map %v", err)
+//		return err
+//	}
+//
+//	err = json.Unmarshal(jsonStr, &v)
+//	if err != nil {
+//		log.Errorf(impulseCtx, "error unmarshaling slice map %v", err)
+//		return err
+//	}
+//
+//	return nil
+//}
 
 func CustomDecode(input, output interface{}) error {
 	config := &mapstructure.DecoderConfig{
