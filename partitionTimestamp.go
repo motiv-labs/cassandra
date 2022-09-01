@@ -8,6 +8,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 	impulse_ctx "github.com/motiv-labs/impulse-ctx"
 	log "github.com/motiv-labs/logwrapper"
+	"reflect"
 	"strings"
 	"time"
 )
@@ -229,7 +230,7 @@ func ConvertSliceMapWithMapStructure(ctx context.Context, sliceMap []map[string]
 	//	return err
 	//}
 
-	err := mapstructure.Decode(sliceMap, &v) // note: I don't think this is actually a decoder, just an unmarshaller.
+	err := CustomDecode(sliceMap, &v) // note: I don't think this is actually a decoder, just an unmarshaller.
 	if err != nil {
 		log.Errorf(impulseCtx, "error decoding slice map %v", err)
 		return err
@@ -262,4 +263,33 @@ func ConvertSliceMapWithArg(ctx context.Context, sliceMap []map[string]interface
 	}
 
 	return nil
+}
+
+func CustomDecode(input, output interface{}) error {
+	config := &mapstructure.DecoderConfig{
+		DecodeHook: mapstructure.ComposeDecodeHookFunc(
+			UUIDToStringHookFunc(),
+		),
+		Result: &output,
+	}
+
+	decoder, err := mapstructure.NewDecoder(config)
+	if err != nil {
+		return err
+	}
+
+	return decoder.Decode(input)
+}
+
+func UUIDToStringHookFunc() mapstructure.DecodeHookFunc {
+	return func(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
+		if f != reflect.TypeOf(gocql.UUID{}) {
+			return data, nil
+		}
+		if t.Kind() != reflect.String {
+			return data, nil
+		}
+
+		return data.(gocql.UUID).String(), nil
+	}
 }
