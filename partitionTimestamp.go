@@ -130,6 +130,7 @@ func (t timestamp) buildCassQuery(table, where, timeRangeColumn string, timeRang
 	selectClause := fmt.Sprintf("SELECT * FROM %s", table)
 
 	// build where clause
+	var whereClause string
 	// build in section
 	// todo upgrade go versions everywhere to use unix milli or micro
 	var startTime int64
@@ -170,9 +171,11 @@ func (t timestamp) buildCassQuery(table, where, timeRangeColumn string, timeRang
 		} else {
 			timeRangeClause = fmt.Sprintf("%s >= '%s' AND %s <= '%s'", timeRangeColumn, start.String(), timeRangeColumn, end.String())
 		}
+		whereClause = fmt.Sprintf("WHERE %s %s AND %s", t.partitionColumn, inClause, timeRangeClause)
+	} else {
+		whereClause = fmt.Sprintf("WHERE %s %s", t.partitionColumn, inClause)
 	}
 
-	whereClause := fmt.Sprintf("WHERE %s %s AND %s", t.partitionColumn, inClause, timeRangeClause)
 	if where != "" {
 		whereClause = fmt.Sprintf("%s AND %s", whereClause, where)
 	}
