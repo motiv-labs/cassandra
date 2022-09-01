@@ -88,7 +88,7 @@ func Example_iterRetry_Scan() {
 	impulseCtx := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 
 	// Getting a cassandra connection initializer
-	sessionInitializer := New( "application_keyspace", ctx)
+	sessionInitializer := New("application_keyspace", ctx)
 
 	// Starting a new cassandra session
 	sessionHolder, err := sessionInitializer.NewSession(ctx)
@@ -138,7 +138,7 @@ func Example_iterRetry_ScanAndClose() {
 	// Starting a new cassandra session
 	sessionHolder, err := sessionInitializer.NewSession(ctx)
 	if err != nil {
-		log.Errorf(impulseCtx,"error initializing cassandra session - %v", err)
+		log.Errorf(impulseCtx, "error initializing cassandra session - %v", err)
 		return
 	}
 
@@ -157,7 +157,7 @@ func Example_iterRetry_ScanAndClose() {
 		dataList = append(dataList, data)
 		return true
 	}, &data.Data1, &data.Data2, &data.Data3, &data.Data4); err != nil {
-		log.Error(impulseCtx,"error while querying table")
+		log.Error(impulseCtx, "error while querying table")
 		// return ...
 	}
 
