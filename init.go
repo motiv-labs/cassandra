@@ -19,21 +19,21 @@ import (
 
 // Schema file to create keyspace if required
 const (
-	schemaDefaultPath     = "/usr/local/bin"
-	schemaDefaultFileName = "schema.sql"
-	defaultCassandraDomain = "db"
+	schemaDefaultPath                  = "/usr/local/bin"
+	schemaDefaultFileName              = "schema.sql"
+	defaultCassandraDomain             = "db"
 	defaultCassandraClusterConsistency = gocql.Quorum
-	defaultUsername = ""
-	defaultPassword = ""
-	defaultSSLCert = ""
+	defaultUsername                    = ""
+	defaultPassword                    = ""
+	defaultSSLCert                     = ""
 
 	envCassandraClusterConsistency = "CLUSTER_CONSISTENCY"
-	envCassandraSchemaPath     = "CASSANDRA_SCHEMA_PATH"
-	envCassandraSchemaFileName = "CASSANDRA_SCHEMA_FILE_NAME"
-	envCassandraDomain = "CASSANDRA_DOMAIN_NAME"
-	envUsername = "CASSANDRA_USERNAME"
-	envPassword = "CASSANDRA_PASSWORD"
-	envSSLCert = "CASSANDRA_SSL_CERT"
+	envCassandraSchemaPath         = "CASSANDRA_SCHEMA_PATH"
+	envCassandraSchemaFileName     = "CASSANDRA_SCHEMA_FILE_NAME"
+	envCassandraDomain             = "CASSANDRA_DOMAIN_NAME"
+	envUsername                    = "CASSANDRA_USERNAME"
+	envPassword                    = "CASSANDRA_PASSWORD"
+	envSSLCert                     = "CASSANDRA_SSL_CERT"
 )
 
 var schemaPath = "/usr/local/bin"
@@ -67,12 +67,12 @@ func init() {
 
 // sessionInitializer is an initializer for a cassandra session
 type sessionInitializer struct {
-	clusterHostName string
+	clusterHostName     string
 	clusterHostUsername string
 	clusterHostPassword string
-	clusterHostSSLCert string
-	keyspace        string
-	consistency gocql.Consistency
+	clusterHostSSLCert  string
+	keyspace            string
+	consistency         gocql.Consistency
 }
 
 // sessionHolder stores a cassandra session
@@ -140,19 +140,19 @@ func Initialize(systemKeyspace, appKeyspace string, connectionTimeout time.Durat
 	log.Debug(impulseCtx, "Setting up cassandra db")
 	connectionHolder, err := loop(connectionTimeout, New(systemKeyspace, ctx), domain, ctx)
 	if err != nil {
-		log.Fatalf(impulseCtx,"error connecting to Cassandra db: %v", err)
+		log.Fatalf(impulseCtx, "error connecting to Cassandra db: %v", err)
 		panic(err)
 	}
 	defer connectionHolder.CloseSession(ctx)
 
-	log.Debug(impulseCtx,"Setting up cassandra keyspace")
+	log.Debug(impulseCtx, "Setting up cassandra keyspace")
 	err = createAppKeyspaceIfRequired(systemKeyspace, appKeyspace, ctx)
 	if err != nil {
-		log.Fatalf(impulseCtx,"error creating keyspace for Cassandra db: %v", err)
+		log.Fatalf(impulseCtx, "error creating keyspace for Cassandra db: %v", err)
 		panic(err)
 	}
 
-	log.Info(impulseCtx,"Cassandra keyspace has been set up")
+	log.Info(impulseCtx, "Cassandra keyspace has been set up")
 }
 
 // NewSession starts a new cassandra session for the given keyspace
@@ -559,7 +559,7 @@ func getenvnolog(envVariable string, defaultValue string, ictx impulse_ctx.Impul
 	return returnValue
 }
 
-func checkConsistency(envVar string,  ictx impulse_ctx.ImpulseCtx) gocql.Consistency {
+func checkConsistency(envVar string, ictx impulse_ctx.ImpulseCtx) gocql.Consistency {
 	switch strings.ToLower(envVar) {
 	case "any":
 		log.Debugf(ictx, "consistency set to any")
