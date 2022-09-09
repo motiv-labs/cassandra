@@ -117,7 +117,7 @@ func (t timestamp) performQuery(ctx context.Context, table, where, timeRangeColu
 	var recordList []map[string]interface{}
 
 	for _, partition := range partitions {
-		if len(recordList) < limit || limit < 0 {
+		if len(recordList) >= limit {
 			break
 		}
 		innerLimit := limit - len(recordList)
@@ -156,7 +156,7 @@ func (t timestamp) getPartitionShards(ctx context.Context, start, end time.Time)
 	startTime = start.Unix()
 	endTime = end.Unix()
 	// make slice
-	partitions := make([]string, inClauseLimit)
+	partitions := make([]string, 0, inClauseLimit)
 
 	// based on https://github.com/hailocab/gocassa/blob/master/timeseries_table.go#L51
 	// note: t.duration/t.duration will always be 1 micro second * 1000.
@@ -166,7 +166,7 @@ func (t timestamp) getPartitionShards(ctx context.Context, start, end time.Time)
 		if i > endTime || iterations > inClauseLimit { // either we've reached the time range or the max amount of values for the in clause was reached
 			break
 		}
-		partitions[iterations] = fmt.Sprintf("%d", i)
+		partitions = append(partitions, fmt.Sprintf("%d", i))
 	}
 	return partitions
 }
