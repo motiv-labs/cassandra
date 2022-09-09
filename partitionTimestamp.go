@@ -166,7 +166,7 @@ func (t timestamp) getPartitionShards(ctx context.Context, start, end time.Time)
 		if i > endTime || iterations > inClauseLimit { // either we've reached the time range or the max amount of values for the in clause was reached
 			break
 		}
-		partitions = append(partitions, fmt.Sprintf("%d", i))
+		partitions[iterations] = fmt.Sprintf("%d", i)
 	}
 	return partitions
 }
