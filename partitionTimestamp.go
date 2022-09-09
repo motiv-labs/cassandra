@@ -110,22 +110,62 @@ func (t timestamp) performQuery(ctx context.Context, table, where, timeRangeColu
 		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
 	}
 
-	query := t.buildCassQuery(ctx, table, where, timeRangeColumn, timeRangeIsUUID, start, end, limit)
-
-	iter := t.session.Query(ctx, query).Iter(ctx)
+	partitions := t.getPartitionShards(ctx, start, end)
 
 	var recordList []map[string]interface{}
-	var err error
 
-	recordList, err = iter.SliceMapAndClose(ctx)
+	for _, partition := range partitions {
+		if len(recordList) < limit || limit < 0 {
+			break
+		}
+		innerLimit := limit - len(recordList)
+		query := t.buildCassQuery(ctx, table, where, timeRangeColumn, timeRangeIsUUID, start, end, innerLimit, partition)
 
-	if err != nil {
-		log.Errorf(impulseCtx, "error while querying table %s", table)
-	} else {
-		log.Debugf(impulseCtx, "successfully returning record list from table %s", table)
+		iter := t.session.Query(ctx, query).Iter(ctx)
+
+		var innerRecordList []map[string]interface{}
+		var err error
+
+		innerRecordList, err = iter.SliceMapAndClose(ctx)
+
+		if err != nil {
+			log.Errorf(impulseCtx, "error while querying table %s", table)
+			return nil, err
+		} else {
+			log.Debugf(impulseCtx, "successfully returning record list from table %s", table)
+		}
+
+		recordList = append(recordList, innerRecordList...)
 	}
 
-	return recordList, err
+	return recordList, nil
+}
+
+func (t timestamp) getPartitionShards(ctx context.Context, start, end time.Time) []string {
+	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
+	if !ok {
+		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
+	}
+
+	var startTime int64
+	var endTime int64
+	// for now, only use seconds. future updates can allow variability
+	startTime = start.Unix()
+	endTime = end.Unix()
+	// make slice
+	partitions := make([]string, inClauseLimit)
+
+	// based on https://github.com/hailocab/gocassa/blob/master/timeseries_table.go#L51
+	// note: t.duration/t.duration will always be 1 micro second * 1000.
+	// increment by 1 because we can save ever second
+
+	for i, iterations := startTime, 0; ; i, iterations = i+1, iterations+1 { // increment each second
+		if i > endTime || iterations > inClauseLimit { // either we've reached the time range or the max amount of values for the in clause was reached
+			break
+		}
+		partitions = append(partitions, fmt.Sprintf("%d", i))
+	}
+	return partitions
 }
 
 /*
@@ -138,7 +178,7 @@ Params:
 	end: end time to query by
 	limit: the number of records to look for and return
 */
-func (t timestamp) buildCassQuery(ctx context.Context, table, where, timeRangeColumn string, timeRangeIsUUID bool, start, end time.Time, limit int) string {
+func (t timestamp) buildCassQuery(ctx context.Context, table, where, timeRangeColumn string, timeRangeIsUUID bool, start, end time.Time, limit int, partition string) string {
 	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 	if !ok {
 		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
@@ -151,32 +191,9 @@ func (t timestamp) buildCassQuery(ctx context.Context, table, where, timeRangeCo
 	var whereClause string
 	// build in section
 	// todo upgrade go versions everywhere to use unix milli or micro
-	var startTime int64
-	var endTime int64
-	// for now, only use seconds. future updates can allow variability
-	startTime = start.Unix()
-	endTime = end.Unix()
-	// open in clause
-	inClause := "IN ("
 
-	// based on https://github.com/hailocab/gocassa/blob/master/timeseries_table.go#L51
-	// note: t.duration/t.duration will always be 1 micro second * 1000.
-	// increment by 1 because we can save ever second
-
-	for i, iterations := startTime, 0; ; i, iterations = i+1, iterations+1 { // increment each second
-		if i > endTime || iterations > inClauseLimit { // either we've reached the time range or the max amount of values for the in clause was reached
-			break
-		}
-		if i == startTime {
-			// first option, don't add comma
-			inClause = fmt.Sprintf("%s%d", inClause, i)
-		} else {
-			// add next partition key with comma
-			inClause = fmt.Sprintf("%s, %d", inClause, i)
-		}
-	}
-	// close in clause
-	inClause = fmt.Sprintf("%s)", inClause)
+	// partition shard equal
+	partitionEq := fmt.Sprintf("%s=%s", t.partitionColumn, partition)
 
 	// build time range clause
 	var timeRangeClause string
@@ -189,9 +206,9 @@ func (t timestamp) buildCassQuery(ctx context.Context, table, where, timeRangeCo
 		} else {
 			timeRangeClause = fmt.Sprintf("%s >= '%s' AND %s <= '%s'", timeRangeColumn, start.String(), timeRangeColumn, end.String())
 		}
-		whereClause = fmt.Sprintf("WHERE %s %s AND %s", t.partitionColumn, inClause, timeRangeClause)
+		whereClause = fmt.Sprintf("WHERE %s AND %s", partitionEq, timeRangeClause)
 	} else {
-		whereClause = fmt.Sprintf("WHERE %s %s", t.partitionColumn, inClause)
+		whereClause = fmt.Sprintf("WHERE %s", partitionEq)
 	}
 
 	if where != "" {
