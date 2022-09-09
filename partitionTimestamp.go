@@ -111,6 +111,7 @@ func (t timestamp) performQuery(ctx context.Context, table, where, timeRangeColu
 	}
 
 	funcTime := time.Now()
+	count := 0
 
 	partitions := t.getPartitionShards(ctx, start, end)
 
@@ -124,6 +125,7 @@ func (t timestamp) performQuery(ctx context.Context, table, where, timeRangeColu
 		query := t.buildCassQuery(ctx, table, where, timeRangeColumn, timeRangeIsUUID, start, end, innerLimit, partition)
 
 		iter := t.session.Query(ctx, query).Iter(ctx)
+		count++
 
 		var innerRecordList []map[string]interface{}
 		var err error
@@ -140,7 +142,7 @@ func (t timestamp) performQuery(ctx context.Context, table, where, timeRangeColu
 		recordList = append(recordList, innerRecordList...)
 	}
 
-	log.Infof(impulseCtx, "function total time is ", time.Since(funcTime).String())
+	log.Infof(impulseCtx, "function total time is %s, count is %d", time.Since(funcTime).String(), count)
 	return recordList, nil
 }
 
