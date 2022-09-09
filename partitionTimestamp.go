@@ -117,7 +117,7 @@ func (t timestamp) performQuery(ctx context.Context, table, where, timeRangeColu
 	var recordList []map[string]interface{}
 
 	for _, partition := range partitions {
-		if len(recordList) >= limit {
+		if len(recordList) >= limit && limit > 0 {
 			break
 		}
 		innerLimit := limit - len(recordList)
