@@ -110,6 +110,8 @@ func (t timestamp) performQuery(ctx context.Context, table, where, timeRangeColu
 		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
 	}
 
+	funcTime := time.Now()
+
 	partitions := t.getPartitionShards(ctx, start, end)
 
 	var recordList []map[string]interface{}
@@ -138,6 +140,7 @@ func (t timestamp) performQuery(ctx context.Context, table, where, timeRangeColu
 		recordList = append(recordList, innerRecordList...)
 	}
 
+	log.Infof(impulseCtx, "function total time is ", time.Since(funcTime).String())
 	return recordList, nil
 }
 
@@ -183,7 +186,6 @@ func (t timestamp) buildCassQuery(ctx context.Context, table, where, timeRangeCo
 	if !ok {
 		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
 	}
-	funcTime := time.Now()
 	// build initial select clause
 	selectClause := fmt.Sprintf("SELECT * FROM %s", table)
 
@@ -225,8 +227,6 @@ func (t timestamp) buildCassQuery(ctx context.Context, table, where, timeRangeCo
 
 	// combine all clauses to create the query
 	query := strings.Join([]string{selectClause, whereClause, limitClause}, " ")
-
-	log.Debugf(impulseCtx, "function total time is ", time.Since(funcTime).String())
 	return query
 }
 
