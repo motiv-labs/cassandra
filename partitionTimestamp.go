@@ -84,7 +84,10 @@ func (t timestamp) CreatePartitionTimestampValueFromTime(timestamp time.Time) in
 	// todo upgrade go versions everywhere to use unix milli or micro
 	var unixTime int64
 	// for now, only use seconds. future updates can allow for options.
-	unixTime = timestamp.Unix()
+	paramUnixTime := timestamp.Unix()
+
+	unixTime = quarterUnixTime(paramUnixTime)
+
 	return unixTime
 }
 
