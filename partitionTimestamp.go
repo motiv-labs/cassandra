@@ -37,6 +37,26 @@ func NewTimestamp(s SessionInterface, duration time.Duration, partitionColumn st
 	}
 }
 
+func quarterUnixTime(unixTime int64) int64 {
+	var qUnixTime int64
+	moduloTime := unixTime % 60
+
+	if moduloTime < 15 {
+		qUnixTime = unixTime - moduloTime
+	} else if moduloTime < 30 {
+		timeShift := moduloTime - 15
+		qUnixTime = unixTime - timeShift
+	} else if moduloTime < 45 {
+		timeShift := moduloTime - 30
+		qUnixTime = unixTime - timeShift
+	} else { // moduloTime <= 59
+		timeShift := moduloTime - 45
+		qUnixTime = unixTime - timeShift
+	}
+
+	return qUnixTime
+}
+
 /*
 CreatePartitionTimestampValue will create a unix timestamp value based for the current second
 This value can be used as the value for a partition key
@@ -46,7 +66,10 @@ func (t timestamp) CreatePartitionTimestampValue() int64 {
 	// todo upgrade go versions everywhere to use unix milli or micro
 	var unixTime int64
 	// for now, only use seconds. future updates can allow for options.
-	unixTime = time.Now().Unix()
+	currentUnixTime := time.Now().Unix()
+
+	unixTime = quarterUnixTime(currentUnixTime)
+
 	return unixTime
 }
 
@@ -98,7 +121,7 @@ func (t timestamp) PartitionTimestampQuery(ctx context.Context, table, where, ti
 
 		// update start time based on in limit
 		// atm everything is only ever based in seconds.
-		startTime = startTime.Add(time.Duration(inClauseLimit) * time.Second)
+		startTime = startTime.Add(time.Duration(inClauseLimit) * time.Second * 15)
 	}
 
 	return recordList, nil
@@ -156,7 +179,9 @@ func (t timestamp) getPartitionShards(ctx context.Context, start, end time.Time)
 	var endTime int64
 	// for now, only use seconds. future updates can allow variability
 	startTime = start.Unix()
+	qStartTime := quarterUnixTime(startTime)
 	endTime = end.Unix()
+	qEndTime := quarterUnixTime(endTime)
 	// make slice
 	partitions := make([]string, 0, inClauseLimit)
 
@@ -164,8 +189,8 @@ func (t timestamp) getPartitionShards(ctx context.Context, start, end time.Time)
 	// note: t.duration/t.duration will always be 1 micro second * 1000.
 	// increment by 1 because we can save ever second
 
-	for i, iterations := startTime, 0; ; i, iterations = i+1, iterations+1 { // increment each second
-		if i > endTime || iterations > inClauseLimit { // either we've reached the time range or the max amount of values for the in clause was reached
+	for i, iterations := qStartTime, 0; ; i, iterations = i+15, iterations+15 { // increment each second
+		if i > qEndTime || iterations > inClauseLimit { // either we've reached the time range or the max amount of values for the in clause was reached
 			break
 		}
 		partitions = append(partitions, fmt.Sprintf("%d", i))
