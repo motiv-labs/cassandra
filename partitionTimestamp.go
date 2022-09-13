@@ -168,7 +168,7 @@ func (t timestamp) performQuery(ctx context.Context, table, where, timeRangeColu
 		recordList = append(recordList, innerRecordList...)
 	}
 
-	log.Infof(impulseCtx, "function total time is %s, count is %d", time.Since(funcTime).String(), count)
+	log.Debugf(impulseCtx, "function total time is %s, count is %d", time.Since(funcTime).String(), count)
 	return recordList, nil
 }
 
