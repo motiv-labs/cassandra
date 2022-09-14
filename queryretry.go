@@ -221,21 +221,9 @@ func (i iterRetry) MapScan(m map[string]interface{}, ctx context.Context) bool {
 SliceMapAndClose runs gocql.Iter.SliceMap and gocql.Iter.Close
 */
 func (i iterRetry) SliceMapAndClose(ctx context.Context) ([]map[string]interface{}, error) {
-	var span opentracing.Span
 	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 	if !ok {
 		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
-		span = opentracing.StartSpan("SliceMapAndClose")
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Interface", "iterRetry")
-		impulseCtx.Span = span
-	} else {
-		span = opentracing.StartSpan("SliceMapAndClose", opentracing.ChildOf(impulseCtx.Span.Context()))
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Interface", "iterRetry")
-		impulseCtx.Span = span
 	}
 	ctx = context.WithValue(ctx, impulse_ctx.ImpulseCtxKey, impulseCtx)
 
