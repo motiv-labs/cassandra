@@ -14,7 +14,6 @@ import (
 
 	"github.com/gocql/gocql"
 	log "github.com/motiv-labs/logwrapper"
-	"github.com/opentracing/opentracing-go"
 )
 
 // Schema file to create keyspace if required
@@ -82,23 +81,10 @@ type sessionHolder struct {
 
 // New return a cassandra session Initializer
 func New(keyspace string, ctx context.Context) Initializer {
-	var span opentracing.Span
 	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 	if !ok {
 		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
-		span = opentracing.StartSpan("New")
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Package", "cassandra")
-		impulseCtx.Span = span
-	} else {
-		span = opentracing.StartSpan("New", opentracing.ChildOf(impulseCtx.Span.Context()))
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Package", "cassandra")
-		impulseCtx.Span = span
 	}
-	ctx = context.WithValue(ctx, impulse_ctx.ImpulseCtxKey, impulseCtx)
 
 	return sessionInitializer{
 		clusterHostName:     domain,
@@ -119,23 +105,10 @@ func New(keyspace string, ctx context.Context) Initializer {
 //	appKeyspace: Application keyspace
 //	connectionTimeout: timeout to get the connection
 func Initialize(systemKeyspace, appKeyspace string, connectionTimeout time.Duration, ctx context.Context) {
-	var span opentracing.Span
 	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 	if !ok {
 		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
-		span = opentracing.StartSpan("Initialize")
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Package", "cassandra")
-		impulseCtx.Span = span
-	} else {
-		span = opentracing.StartSpan("Initialize", opentracing.ChildOf(impulseCtx.Span.Context()))
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Package", "cassandra")
-		impulseCtx.Span = span
 	}
-	ctx = context.WithValue(ctx, impulse_ctx.ImpulseCtxKey, impulseCtx)
 
 	log.Debug(impulseCtx, "Setting up cassandra db")
 	connectionHolder, err := loop(connectionTimeout, New(systemKeyspace, ctx), domain, ctx)
@@ -160,19 +133,11 @@ func Initialize(systemKeyspace, appKeyspace string, connectionTimeout time.Durat
 //
 // Returns a session Holder for the session, or an error if can't start the session
 func (i sessionInitializer) NewSession(ctx context.Context) (Holder, error) {
-	var span opentracing.Span
 	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 	if !ok {
 		log.Error(impulseCtx, "ImpulseCtx isn't correct type")
 		return nil, impulse_ctx.NewInvalidImpulseCtx("ImpulseCtx isn't correct type")
-	} else {
-		span = opentracing.StartSpan("NewSession", opentracing.ChildOf(impulseCtx.Span.Context()))
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Interface", "sessionInitializer")
-		impulseCtx.Span = span
 	}
-	ctx = context.WithValue(ctx, impulse_ctx.ImpulseCtxKey, impulseCtx)
 
 	session, err := newKeyspaceSession(i.clusterHostName, i.keyspace,
 		i.clusterHostUsername, i.clusterHostPassword, i.clusterHostSSLCert, i.consistency,
@@ -189,65 +154,31 @@ func (i sessionInitializer) NewSession(ctx context.Context) (Holder, error) {
 
 // GetSession returns the stored cassandra session
 func (holder sessionHolder) GetSession(ctx context.Context) SessionInterface {
-	var span opentracing.Span
 	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 	if !ok {
 		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
-		span = opentracing.StartSpan("GetSession")
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Interface", "sessionHolder")
-		impulseCtx.Span = span
-	} else {
-		span = opentracing.StartSpan("GetSession", opentracing.ChildOf(impulseCtx.Span.Context()))
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Interface", "sessionHolder")
-		impulseCtx.Span = span
 	}
-	ctx = context.WithValue(ctx, impulse_ctx.ImpulseCtxKey, impulseCtx)
 
 	return holder.session
 }
 
 // CloseSession closes the cassandra session
 func (holder sessionHolder) CloseSession(ctx context.Context) {
-	var span opentracing.Span
 	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 	if !ok {
 		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
-		span = opentracing.StartSpan("CloseSession")
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Interface", "sessionHolder")
-		impulseCtx.Span = span
-	} else {
-		span = opentracing.StartSpan("CloseSession", opentracing.ChildOf(impulseCtx.Span.Context()))
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Interface", "sessionHolder")
-		impulseCtx.Span = span
 	}
-	ctx = context.WithValue(ctx, impulse_ctx.ImpulseCtxKey, impulseCtx)
 
 	holder.session.Close(ctx)
 }
 
 // newKeyspaceSession returns a new session for the given keyspace
 func newKeyspaceSession(clusterHostName, keyspace, username, password, sslCert string, clusterConsistency gocql.Consistency, clusterTimeout time.Duration, ctx context.Context) (*gocql.Session, error) {
-	var span opentracing.Span
 	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 	if !ok {
-		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
+		log.Error(impulseCtx, "ImpulseCtx isn't correct type")
 		return nil, impulse_ctx.NewInvalidImpulseCtx("ImpulseCtx isn't correct type")
-	} else {
-		span = opentracing.StartSpan("newKeyspaceSession", opentracing.ChildOf(impulseCtx.Span.Context()))
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Package", "cassandra")
-		impulseCtx.Span = span
 	}
-	ctx = context.WithValue(ctx, impulse_ctx.ImpulseCtxKey, impulseCtx)
 
 	log.Infof(impulseCtx, "Creating new cassandra session for cluster hostname: %s and keyspace: %s", clusterHostName, keyspace)
 	cluster := gocql.NewCluster(clusterHostName)
@@ -272,19 +203,11 @@ func newKeyspaceSession(clusterHostName, keyspace, username, password, sslCert s
 
 // createAppKeyspaceIfRequired creates the keyspace for the app if it doesn't exist
 func createAppKeyspaceIfRequired(systemKeyspace, appKeyspace string, ctx context.Context) error {
-	var span opentracing.Span
 	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 	if !ok {
-		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
+		log.Error(impulseCtx, "ImpulseCtx isn't correct type")
 		return impulse_ctx.NewInvalidImpulseCtx("ImpulseCtx isn't correct type")
-	} else {
-		span = opentracing.StartSpan("createAppKeyspaceIfRequired", opentracing.ChildOf(impulseCtx.Span.Context()))
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Package", "cassandra")
-		impulseCtx.Span = span
 	}
-	ctx = context.WithValue(ctx, impulse_ctx.ImpulseCtxKey, impulseCtx)
 
 	// Getting the schema file if exist
 	stmtList, err := getStmtsFromFile(path.Join(schemaPath, schemaFileName), ctx)
@@ -347,19 +270,11 @@ func createAppKeyspaceIfRequired(systemKeyspace, appKeyspace string, ctx context
 
 // getStmtsFromFile extracts CQL statements from the file
 func getStmtsFromFile(fileName string, ctx context.Context) ([]string, error) {
-	var span opentracing.Span
 	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 	if !ok {
-		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
+		log.Error(impulseCtx, "ImpulseCtx isn't correct type")
 		return nil, impulse_ctx.NewInvalidImpulseCtx("ImpulseCtx isn't correct type")
-	} else {
-		span = opentracing.StartSpan("getStmtsFromFile", opentracing.ChildOf(impulseCtx.Span.Context()))
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Package", "cassandra")
-		impulseCtx.Span = span
 	}
-	ctx = context.WithValue(ctx, impulse_ctx.ImpulseCtxKey, impulseCtx)
 
 	// Verify first if the file exist
 	if _, err := os.Stat(fileName); err != nil {
@@ -409,23 +324,10 @@ func getStmtsFromFile(fileName string, ctx context.Context) ([]string, error) {
 
 // getMatch returns the matched substring if there's a match, nil otherwise
 func getMatch(src []byte, base int, match []int, start int, end int, ctx context.Context) []byte {
-	var span opentracing.Span
 	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 	if !ok {
 		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
-		span = opentracing.StartSpan("getMatch")
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Package", "cassandra")
-		impulseCtx.Span = span
-	} else {
-		span = opentracing.StartSpan("getMatch", opentracing.ChildOf(impulseCtx.Span.Context()))
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Package", "cassandra")
-		impulseCtx.Span = span
 	}
-	ctx = context.WithValue(ctx, impulse_ctx.ImpulseCtxKey, impulseCtx)
 
 	if match[start] >= 0 {
 		return src[base+match[start] : base+match[end]]
@@ -436,23 +338,10 @@ func getMatch(src []byte, base int, match []int, start int, end int, ctx context
 
 // getKeyspaceNameFromUseStmt return keyspace name for use statement
 func getKeyspaceNameFromUseStmt(stmt string, ctx context.Context) (string, bool) {
-	var span opentracing.Span
 	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 	if !ok {
 		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
-		span = opentracing.StartSpan("getKeyspaceNameFromUseStmt")
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Package", "cassandra")
-		impulseCtx.Span = span
-	} else {
-		span = opentracing.StartSpan("getKeyspaceNameFromUseStmt", opentracing.ChildOf(impulseCtx.Span.Context()))
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Package", "cassandra")
-		impulseCtx.Span = span
 	}
-	ctx = context.WithValue(ctx, impulse_ctx.ImpulseCtxKey, impulseCtx)
 
 	pattern := regexp.MustCompile(`(?ms)[Uu][Ss][Ee]\s+("(?:[^"]|"")+"|\w+)`)
 	if pattern.MatchString(stmt) {
@@ -479,19 +368,11 @@ func getKeyspaceNameFromUseStmt(stmt string, ctx context.Context) (string, bool)
 //
 // Returns a session Holder to store the session, or an error if the timeout was reached
 func loop(timeout time.Duration, initializer Initializer, connectionHost string, ctx context.Context) (Holder, error) {
-	var span opentracing.Span
 	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 	if !ok {
-		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
+		log.Error(impulseCtx, "ImpulseCtx isn't correct type")
 		return nil, impulse_ctx.NewInvalidImpulseCtx("ImpulseCtx isn't correct type")
-	} else {
-		span = opentracing.StartSpan("loop", opentracing.ChildOf(impulseCtx.Span.Context()))
-		defer span.Finish()
-		span.SetTag("Module", "cassandra")
-		span.SetTag("Package", "cassandra")
-		impulseCtx.Span = span
 	}
-	ctx = context.WithValue(ctx, impulse_ctx.ImpulseCtxKey, impulseCtx)
 
 	log.Debugf(impulseCtx, "Connection loop to connect to %s, timeout to use: %s", connectionHost, timeout)
 	ticker := time.NewTicker(1 * time.Second)
