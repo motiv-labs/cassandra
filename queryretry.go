@@ -25,14 +25,15 @@ var cassandraSecondsToSleepIncrement = 1
 // init functions are automatically executed when the programs starts
 func init() {
 	ictx := impulse_ctx.ImpulseCtx{}
-	cassandraRetryAttempts, err := strconv.Atoi(getenv(envCassandraAttempts, defaultCassandraRetryAttempts, ictx))
+	var err error
+	cassandraRetryAttempts, err = strconv.Atoi(getenv(envCassandraAttempts, defaultCassandraRetryAttempts, ictx))
 	if err != nil {
 		log.Errorf(ictx, "error trying to get CASSANDRA_RETRY_ATTEMPTS value: %s",
 			getenv(envCassandraAttempts, defaultCassandraRetryAttempts, ictx))
 		cassandraRetryAttempts = 3
 	}
 
-	cassandraSecondsToSleep, err := strconv.Atoi(getenv(envCassandraSecondsToSleepIncrement, defaultCassandraSecondsToSleepIncrement, ictx))
+	cassandraSecondsToSleepIncrement, err = strconv.Atoi(getenv(envCassandraSecondsToSleepIncrement, defaultCassandraSecondsToSleepIncrement, ictx))
 	if err != nil {
 		log.Errorf(ictx, "error trying to get CASSANDRA_SECONDS_SLEEP value: %s",
 			getenv(envCassandraSecondsToSleepIncrement, defaultCassandraSecondsToSleepIncrement, ictx))
@@ -40,7 +41,7 @@ func init() {
 	}
 
 	log.Debugf(ictx, "got cassandraRetryAttempts: %d", cassandraRetryAttempts)
-	log.Debugf(ictx, "got cassandraSecondsToSleepIncrement: %d", cassandraSecondsToSleep)
+	log.Debugf(ictx, "got cassandraSecondsToSleepIncrement: %d", cassandraSecondsToSleepIncrement)
 }
 
 // queryRetry is an implementation of QueryInterface
@@ -112,7 +113,7 @@ func (q queryRetry) Scan(ctx context.Context, dest ...interface{}) error {
 	for attempts <= retries {
 		//we will try to run the method several times until attempts is met
 		err = q.goCqlQuery.Scan(dest...)
-		if err != nil {
+		if err != nil && err != gocql.ErrNotFound { // don't retry not found errors
 			log.Warnf(impulseCtx, "error when running Scan(): %v, attempt: %d / %d", err, attempts, retries)
 
 			// incremental sleep
