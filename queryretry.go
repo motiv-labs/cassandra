@@ -246,12 +246,12 @@ func (i iterRetry) SliceMapAndClose(ctx context.Context) ([]map[string]interface
 		// Scan consumes the next row of the iterator and copies the columns of the
 		// current row into the values pointed at by dest.
 		queryUUID := uuid.New().String()
-		log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`columns: %v`messageToGrep: before exec", queryUUID, time.Now().Unix(), i.goCqlIter.Columns())
+		log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %v`messageToGrep: before exec", queryUUID, time.Now().Unix(), i.goCqlIter.Columns())
 		sliceMap, err = i.goCqlIter.SliceMap()
 
 		// we will try to run the method several times until attempts is met
 		if err = i.goCqlIter.Close(); err != nil {
-			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`columns: %s`messageToGrep: error - %v", queryUUID, time.Now().Unix(), i.goCqlIter.Columns(), err)
+			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %s`messageToGrep: error - %v", queryUUID, time.Now().Unix(), i.goCqlIter.Columns(), err)
 			log.Warnf(impulseCtx, "error when running Close(): %v, attempt: %d / %d", err, attempts, retries)
 
 			// incremental sleep
@@ -306,7 +306,7 @@ func (i iterRetry) ScanAndClose(ctx context.Context, handle func() bool, dest ..
 		// Scan consumes the next row of the iterator and copies the columns of the
 		// current row into the values pointed at by dest.
 		queryUUID := uuid.New().String()
-		log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`columns: %v`messageToGrep: before exec", queryUUID, time.Now().Unix(), i.goCqlIter.Columns())
+		log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %v`messageToGrep: before exec", queryUUID, time.Now().Unix(), i.goCqlIter.Columns())
 		for i.goCqlIter.Scan(dest...) {
 			if !handle() {
 				break
@@ -315,7 +315,7 @@ func (i iterRetry) ScanAndClose(ctx context.Context, handle func() bool, dest ..
 
 		// we will try to run the method several times until attempts is met
 		if err = i.goCqlIter.Close(); err != nil {
-			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`columns: %s`messageToGrep: error - %v", queryUUID, time.Now().Unix(), i.goCqlIter.Columns(), err)
+			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %s`messageToGrep: error - %v", queryUUID, time.Now().Unix(), i.goCqlIter.Columns(), err)
 			log.Warnf(impulseCtx, "error when running Close(): %v, attempt: %d / %d", err, attempts, retries)
 
 			// incremental sleep
