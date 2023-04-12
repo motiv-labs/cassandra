@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	impulse_ctx "github.com/motiv-labs/impulse-ctx"
 	log "github.com/motiv-labs/logwrapper"
+	"github.com/motiv-labs/workerpool"
 	"strconv"
 	"time"
 )
@@ -13,13 +14,34 @@ import (
 const (
 	defaultCassandraRetryAttempts           = "3"
 	defaultCassandraSecondsToSleepIncrement = "1"
+	defaultWorkerPoolSize                   = "50"
 
 	envCassandraAttempts                = "CASSANDRA_RETRY_ATTEMPTS"
 	envCassandraSecondsToSleepIncrement = "CASSANDRA_SECONDS_SLEEP_INCREMENT"
+	envWorkerPoolSize                   = "CASSANDRA_WORKER_POOL_SIZE"
 )
 
 var cassandraRetryAttempts = 3
 var cassandraSecondsToSleepIncrement = 1
+var workerPoolSize = 50
+
+//todo add worker pool
+// default to 50
+// allow each service to set the workerpool size individually
+var workerPool *workerpool.WorkerPool
+
+func initWorkerPool() {
+	ictx := impulse_ctx.ImpulseCtx{}
+	ctx := impulse_ctx.NewContext(context.Background(), "", nil, "")
+	eWorkerPoolSize, err := strconv.Atoi(getenv(envWorkerPoolSize, defaultWorkerPoolSize, ictx))
+	if err != nil {
+		log.Errorf(ictx, "error trying to get %s value: %s",
+			envWorkerPoolSize, getenv(envWorkerPoolSize, defaultWorkerPoolSize, ictx))
+		eWorkerPoolSize = workerPoolSize
+	}
+
+	workerPool = workerpool.NewWorkerPool(ctx, eWorkerPoolSize)
+}
 
 // Package level initialization.
 //
@@ -39,6 +61,8 @@ func init() {
 			getenv(envCassandraSecondsToSleepIncrement, defaultCassandraSecondsToSleepIncrement, ictx))
 		cassandraSecondsToSleepIncrement = 1
 	}
+
+	initWorkerPool()
 
 	log.Debugf(ictx, "got cassandraRetryAttempts: %d", cassandraRetryAttempts)
 	log.Debugf(ictx, "got cassandraSecondsToSleepIncrement: %d", cassandraSecondsToSleep)
@@ -74,7 +98,17 @@ func (q queryRetry) Exec(ctx context.Context) error {
 		//we will try to run the method several times until attempts is met
 		queryUUID := uuid.New().String()
 		log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %s`messageToGrep: before exec", queryUUID, time.Now().Unix(), q.goCqlQuery.Statement())
-		err = q.goCqlQuery.Exec()
+
+		queryExecuted := false
+		workerPool.Submit(ctx, func() {
+			err = q.goCqlQuery.Exec()
+			queryExecuted = true
+		})
+		for !queryExecuted {
+			// small sleep time is required for cpu burn
+			//time.Sleep(1 * time.Millisecond)
+		}
+
 		if err != nil {
 			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %s`messageToGrep: error - %v", queryUUID, time.Now().Unix(), q.goCqlQuery.Statement(), err)
 			log.Warnf(impulseCtx, "error when running Exec(): %v, attempt: %d / %d", err, attempts, retryAttempts)
@@ -117,7 +151,17 @@ func (q queryRetry) Scan(ctx context.Context, dest ...interface{}) error {
 		//we will try to run the method several times until attempts is met
 		queryUUID := uuid.New().String()
 		log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %s`messageToGrep: before exec", queryUUID, time.Now().Unix(), q.goCqlQuery.Statement())
-		err = q.goCqlQuery.Scan(dest...)
+
+		queryExecuted := false
+		workerPool.Submit(ctx, func() {
+			err = q.goCqlQuery.Scan(dest...)
+			queryExecuted = true
+		})
+		for !queryExecuted {
+			// small sleep time is required for cpu burn
+			//time.Sleep(1 * time.Millisecond)
+		}
+
 		if err != nil {
 			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %s`messageToGrep: error - %v", queryUUID, time.Now().Unix(), q.goCqlQuery.Statement(), err)
 			log.Warnf(impulseCtx, "error when running Scan(): %v, attempt: %d / %d", err, attempts, retries)
@@ -186,7 +230,19 @@ func (i iterRetry) Scan(ctx context.Context, dest ...interface{}) bool {
 	log.Debug(impulseCtx, "running iterRetry Scan() method")
 
 	log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %v`messageToGrep: before exec", "", time.Now().Unix(), i.goCqlIter.Columns())
-	return i.goCqlIter.Scan(dest...)
+
+	queryExecuted := false
+	var returnValue bool
+	workerPool.Submit(ctx, func() {
+		returnValue = i.goCqlIter.Scan(dest...)
+		queryExecuted = true
+	})
+	for !queryExecuted {
+		// small sleep time is required for cpu burn
+		//time.Sleep(1 * time.Millisecond)
+	}
+
+	return returnValue
 }
 
 // WillSwitchPage is just a wrapper to be able to call this method
@@ -198,7 +254,18 @@ func (i iterRetry) WillSwitchPage(ctx context.Context) bool {
 
 	log.Debug(impulseCtx, "running iterRetry Close() method")
 
-	return i.goCqlIter.WillSwitchPage()
+	queryExecuted := false
+	var returnValue bool
+	workerPool.Submit(ctx, func() {
+		returnValue = i.goCqlIter.WillSwitchPage()
+		queryExecuted = true
+	})
+	for !queryExecuted {
+		// small sleep time is required for cpu burn
+		//time.Sleep(1 * time.Millisecond)
+	}
+
+	return returnValue
 }
 
 // PageState is just a wrapper to be able to call this method
@@ -210,7 +277,18 @@ func (i iterRetry) PageState(ctx context.Context) []byte {
 
 	log.Debug(impulseCtx, "running iterRetry PageState() method")
 
-	return i.goCqlIter.PageState()
+	queryExecuted := false
+	var returnValue []byte
+	workerPool.Submit(ctx, func() {
+		returnValue = i.goCqlIter.PageState()
+		queryExecuted = true
+	})
+	for !queryExecuted {
+		// small sleep time is required for cpu burn
+		//time.Sleep(1 * time.Millisecond)
+	}
+
+	return returnValue
 }
 
 // MapScan is just a wrapper to be able to call this method
@@ -222,7 +300,18 @@ func (i iterRetry) MapScan(m map[string]interface{}, ctx context.Context) bool {
 
 	log.Debug(impulseCtx, "running iterRetry PageState() method")
 
-	return i.goCqlIter.MapScan(m)
+	queryExecuted := false
+	var returnValue bool
+	workerPool.Submit(ctx, func() {
+		returnValue = i.goCqlIter.MapScan(m)
+		queryExecuted = true
+	})
+	for !queryExecuted {
+		// small sleep time is required for cpu burn
+		//time.Sleep(1 * time.Millisecond)
+	}
+
+	return returnValue
 }
 
 /*
@@ -248,7 +337,16 @@ func (i iterRetry) SliceMapAndClose(ctx context.Context) ([]map[string]interface
 		// current row into the values pointed at by dest.
 		queryUUID := uuid.New().String()
 		log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %v`messageToGrep: before exec", queryUUID, time.Now().Unix(), i.goCqlIter.Columns())
-		sliceMap, err = i.goCqlIter.SliceMap()
+
+		queryExecuted := false
+		workerPool.Submit(ctx, func() {
+			sliceMap, err = i.goCqlIter.SliceMap()
+			queryExecuted = true
+		})
+		for !queryExecuted {
+			// small sleep time is required for cpu burn
+			//time.Sleep(1 * time.Millisecond)
+		}
 
 		// we will try to run the method several times until attempts is met
 		if err = i.goCqlIter.Close(); err != nil {
@@ -313,7 +411,7 @@ func (i iterRetry) ScanAndClose(ctx context.Context, handle func() bool, dest ..
 		// current row into the values pointed at by dest.
 		queryUUID := uuid.New().String()
 		log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %v`messageToGrep: before exec", queryUUID, time.Now().Unix(), i.goCqlIter.Columns())
-		for i.goCqlIter.Scan(dest...) {
+		for i.Scan(ctx, dest...) {
 			if !handle() {
 				break
 			}
@@ -365,7 +463,7 @@ func (i iterRetry) MapScanAndClose(m map[string]interface{}, handle func(), ctx 
 		// current row into the values pointed at by dest.
 		queryUUID := uuid.New().String()
 		log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %v`messageToGrep: before exec", queryUUID, time.Now().Unix(), i.goCqlIter.Columns())
-		for i.goCqlIter.MapScan(m) {
+		for i.MapScan(m, ctx) {
 			handle()
 		}
 
