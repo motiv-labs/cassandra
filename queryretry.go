@@ -97,11 +97,13 @@ func (q queryRetry) Exec(ctx context.Context) error {
 	for attempts <= retryAttempts {
 		//we will try to run the method several times until attempts is met
 		queryUUID := uuid.New().String()
-		log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %s`messageToGrep: before exec", queryUUID, time.Now().Unix(), q.goCqlQuery.Statement())
 
+		startTime := time.Now().UnixNano()
 		queryExecuted := false
 		workerPool.Submit(ctx, func() {
+			startTime = time.Now().UnixNano()
 			err = q.goCqlQuery.Exec()
+			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`startTime: %d`query: %s`messageToGrep: before exec", queryUUID, time.Now().UnixNano(), startTime, q.goCqlQuery.Statement())
 			queryExecuted = true
 		})
 		for !queryExecuted {
@@ -110,7 +112,7 @@ func (q queryRetry) Exec(ctx context.Context) error {
 		}
 
 		if err != nil {
-			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %s`messageToGrep: error - %v", queryUUID, time.Now().Unix(), q.goCqlQuery.Statement(), err)
+			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`startTime: %d`query: %s`messageToGrep: error - %v", queryUUID, time.Now().UnixNano(), startTime, q.goCqlQuery.Statement(), err)
 			log.Warnf(impulseCtx, "error when running Exec(): %v, attempt: %d / %d", err, attempts, retryAttempts)
 
 			// incremental sleep
@@ -150,11 +152,13 @@ func (q queryRetry) Scan(ctx context.Context, dest ...interface{}) error {
 	for attempts <= retries {
 		//we will try to run the method several times until attempts is met
 		queryUUID := uuid.New().String()
-		log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %s`messageToGrep: before exec", queryUUID, time.Now().Unix(), q.goCqlQuery.Statement())
+		startTime := time.Now().UnixNano()
 
 		queryExecuted := false
 		workerPool.Submit(ctx, func() {
+			startTime = time.Now().UnixNano()
 			err = q.goCqlQuery.Scan(dest...)
+			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`startTime %d`query: %s`messageToGrep: before exec", queryUUID, time.Now().UnixNano(), startTime, q.goCqlQuery.Statement())
 			queryExecuted = true
 		})
 		for !queryExecuted {
@@ -163,7 +167,7 @@ func (q queryRetry) Scan(ctx context.Context, dest ...interface{}) error {
 		}
 
 		if err != nil {
-			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %s`messageToGrep: error - %v", queryUUID, time.Now().Unix(), q.goCqlQuery.Statement(), err)
+			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`startTime %d`query: %s`messageToGrep: error - %v", queryUUID, time.Now().UnixNano(), startTime, q.goCqlQuery.Statement(), err)
 			log.Warnf(impulseCtx, "error when running Scan(): %v, attempt: %d / %d", err, attempts, retries)
 
 			// incremental sleep
@@ -229,12 +233,13 @@ func (i iterRetry) Scan(ctx context.Context, dest ...interface{}) bool {
 
 	log.Debug(impulseCtx, "running iterRetry Scan() method")
 
-	log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %v`messageToGrep: before exec", "", time.Now().Unix(), i.goCqlIter.Columns())
-
+	startTime := time.Now().UnixNano()
 	queryExecuted := false
 	var returnValue bool
 	workerPool.Submit(ctx, func() {
+		startTime = time.Now().UnixNano()
 		returnValue = i.goCqlIter.Scan(dest...)
+		log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`startTime: %d`query: %v`messageToGrep: before exec", "", time.Now().UnixNano(), startTime, i.goCqlIter.Columns())
 		queryExecuted = true
 	})
 	for !queryExecuted {
@@ -336,11 +341,13 @@ func (i iterRetry) SliceMapAndClose(ctx context.Context) ([]map[string]interface
 		// Scan consumes the next row of the iterator and copies the columns of the
 		// current row into the values pointed at by dest.
 		queryUUID := uuid.New().String()
-		log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %v`messageToGrep: before exec", queryUUID, time.Now().Unix(), i.goCqlIter.Columns())
+		startTime := time.Now().UnixNano()
 
 		queryExecuted := false
 		workerPool.Submit(ctx, func() {
+			startTime = time.Now().UnixNano()
 			sliceMap, err = i.goCqlIter.SliceMap()
+			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`startTime: %d`query: %v`messageToGrep: before exec", queryUUID, time.Now().UnixNano(), startTime, i.goCqlIter.Columns())
 			queryExecuted = true
 		})
 		for !queryExecuted {
@@ -350,7 +357,7 @@ func (i iterRetry) SliceMapAndClose(ctx context.Context) ([]map[string]interface
 
 		// we will try to run the method several times until attempts is met
 		if err = i.goCqlIter.Close(); err != nil {
-			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %s`messageToGrep: error - %v", queryUUID, time.Now().Unix(), i.goCqlIter.Columns(), err)
+			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`startTime: %d`query: %s`messageToGrep: error - %v", queryUUID, time.Now().UnixNano(), startTime, i.goCqlIter.Columns(), err)
 			log.Warnf(impulseCtx, "error when running Close(): %v, attempt: %d / %d", err, attempts, retries)
 
 			// incremental sleep
@@ -380,9 +387,10 @@ func (i iterRetry) Close(ctx context.Context) error {
 
 	log.Debug(impulseCtx, "running iterRetry Close() method")
 
+	startTime := time.Now().UnixNano()
 	err := i.goCqlIter.Close()
 	if err != nil {
-		log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %s`messageToGrep: error - %v", "", time.Now().Unix(), i.goCqlIter.Columns(), err)
+		log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`startTime: %d`query: %s`messageToGrep: error - %v", "", time.Now().UnixNano(), startTime, i.goCqlIter.Columns(), err)
 	}
 
 	return err
@@ -410,8 +418,10 @@ func (i iterRetry) ScanAndClose(ctx context.Context, handle func() bool, dest ..
 		// Scan consumes the next row of the iterator and copies the columns of the
 		// current row into the values pointed at by dest.
 		queryUUID := uuid.New().String()
-		log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %v`messageToGrep: before exec", queryUUID, time.Now().Unix(), i.goCqlIter.Columns())
+		startTime := time.Now().UnixNano()
+		//log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %v`messageToGrep: before exec", queryUUID, time.Now().UnixNano(), i.goCqlIter.Columns())
 		for i.Scan(ctx, dest...) {
+			startTime = time.Now().UnixNano()
 			if !handle() {
 				break
 			}
@@ -419,7 +429,7 @@ func (i iterRetry) ScanAndClose(ctx context.Context, handle func() bool, dest ..
 
 		// we will try to run the method several times until attempts is met
 		if err = i.goCqlIter.Close(); err != nil {
-			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %s`messageToGrep: error - %v", queryUUID, time.Now().Unix(), i.goCqlIter.Columns(), err)
+			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`approxStartTime: %d`query: %s`messageToGrep: error - %v", queryUUID, time.Now().UnixNano(), startTime, i.goCqlIter.Columns(), err)
 			log.Warnf(impulseCtx, "error when running Close(): %v, attempt: %d / %d", err, attempts, retries)
 
 			// incremental sleep
@@ -462,14 +472,16 @@ func (i iterRetry) MapScanAndClose(m map[string]interface{}, handle func(), ctx 
 		// Scan consumes the next row of the iterator and copies the columns of the
 		// current row into the values pointed at by dest.
 		queryUUID := uuid.New().String()
-		log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %v`messageToGrep: before exec", queryUUID, time.Now().Unix(), i.goCqlIter.Columns())
+		startTime := time.Now().UnixNano()
+		//log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %v`messageToGrep: before exec", queryUUID, time.Now().UnixNano(), i.goCqlIter.Columns())
 		for i.MapScan(m, ctx) {
+			startTime = time.Now().UnixNano()
 			handle()
 		}
 
 		// we will try to run the method several times until attempts is met
 		if err = i.goCqlIter.Close(); err != nil {
-			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %s`messageToGrep: error - %v", queryUUID, time.Now().Unix(), i.goCqlIter.Columns(), err)
+			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`approxStartTime: %d`query: %s`messageToGrep: error - %v", queryUUID, time.Now().UnixNano(), startTime, i.goCqlIter.Columns(), err)
 			log.Warnf(impulseCtx, "error when running Close(): %v, attempt: %d / %d", err, attempts, retries)
 
 			// incremental sleep
