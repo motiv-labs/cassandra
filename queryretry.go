@@ -108,7 +108,7 @@ func (q queryRetry) Exec(ctx context.Context) error {
 		})
 		for !queryExecuted {
 			// small sleep time is required for cpu burn
-			//time.Sleep(1 * time.Millisecond)
+			time.Sleep(2 * time.Millisecond)
 		}
 
 		if err != nil {
@@ -163,7 +163,7 @@ func (q queryRetry) Scan(ctx context.Context, dest ...interface{}) error {
 		})
 		for !queryExecuted {
 			// small sleep time is required for cpu burn
-			//time.Sleep(1 * time.Millisecond)
+			time.Sleep(2 * time.Millisecond)
 		}
 
 		if err != nil {
@@ -244,7 +244,7 @@ func (i iterRetry) Scan(ctx context.Context, dest ...interface{}) bool {
 	})
 	for !queryExecuted {
 		// small sleep time is required for cpu burn
-		//time.Sleep(1 * time.Millisecond)
+		time.Sleep(2 * time.Millisecond)
 	}
 
 	return returnValue
@@ -267,7 +267,7 @@ func (i iterRetry) WillSwitchPage(ctx context.Context) bool {
 	})
 	for !queryExecuted {
 		// small sleep time is required for cpu burn
-		//time.Sleep(1 * time.Millisecond)
+		time.Sleep(2 * time.Millisecond)
 	}
 
 	return returnValue
@@ -290,7 +290,7 @@ func (i iterRetry) PageState(ctx context.Context) []byte {
 	})
 	for !queryExecuted {
 		// small sleep time is required for cpu burn
-		//time.Sleep(1 * time.Millisecond)
+		time.Sleep(2 * time.Millisecond)
 	}
 
 	return returnValue
@@ -313,7 +313,7 @@ func (i iterRetry) MapScan(m map[string]interface{}, ctx context.Context) bool {
 	})
 	for !queryExecuted {
 		// small sleep time is required for cpu burn
-		//time.Sleep(1 * time.Millisecond)
+		time.Sleep(2 * time.Millisecond)
 	}
 
 	return returnValue
@@ -352,7 +352,7 @@ func (i iterRetry) SliceMapAndClose(ctx context.Context) ([]map[string]interface
 		})
 		for !queryExecuted {
 			// small sleep time is required for cpu burn
-			//time.Sleep(1 * time.Millisecond)
+			time.Sleep(2 * time.Millisecond)
 		}
 
 		// we will try to run the method several times until attempts is met
