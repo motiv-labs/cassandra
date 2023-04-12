@@ -15,15 +15,18 @@ const (
 	defaultCassandraRetryAttempts           = "3"
 	defaultCassandraSecondsToSleepIncrement = "1"
 	defaultWorkerPoolSize                   = "50"
+	defaultWorkerPoolSleep                  = "2"
 
 	envCassandraAttempts                = "CASSANDRA_RETRY_ATTEMPTS"
 	envCassandraSecondsToSleepIncrement = "CASSANDRA_SECONDS_SLEEP_INCREMENT"
 	envWorkerPoolSize                   = "CASSANDRA_WORKER_POOL_SIZE"
+	envWorkerPoolSleep                  = "CASSANDRA_WORKER_POOL_SLEEP"
 )
 
 var cassandraRetryAttempts = 3
 var cassandraSecondsToSleepIncrement = 1
 var workerPoolSize = 50
+var workerPoolSleep = 2
 
 //todo add worker pool
 // default to 50
@@ -39,6 +42,14 @@ func initWorkerPool() {
 			envWorkerPoolSize, getenv(envWorkerPoolSize, defaultWorkerPoolSize, ictx))
 		eWorkerPoolSize = workerPoolSize
 	}
+
+	eWorkerPoolSleep, err := strconv.Atoi(getenv(envWorkerPoolSleep, defaultWorkerPoolSleep, ictx))
+	if err != nil {
+		log.Errorf(ictx, "error trying to get %s value: %s",
+			envWorkerPoolSleep, getenv(envWorkerPoolSleep, defaultWorkerPoolSleep, ictx))
+		eWorkerPoolSize = workerPoolSleep
+	}
+	workerPoolSleep = eWorkerPoolSleep
 
 	workerPool = workerpool.NewWorkerPool(ctx, eWorkerPoolSize)
 }
@@ -108,7 +119,7 @@ func (q queryRetry) Exec(ctx context.Context) error {
 		})
 		for !queryExecuted {
 			// small sleep time is required for cpu burn
-			time.Sleep(2 * time.Millisecond)
+			time.Sleep(time.Duration(workerPoolSleep) * time.Millisecond)
 		}
 
 		if err != nil {
@@ -163,7 +174,7 @@ func (q queryRetry) Scan(ctx context.Context, dest ...interface{}) error {
 		})
 		for !queryExecuted {
 			// small sleep time is required for cpu burn
-			time.Sleep(2 * time.Millisecond)
+			time.Sleep(time.Duration(workerPoolSleep) * time.Millisecond)
 		}
 
 		if err != nil {
@@ -244,7 +255,7 @@ func (i iterRetry) Scan(ctx context.Context, dest ...interface{}) bool {
 	})
 	for !queryExecuted {
 		// small sleep time is required for cpu burn
-		time.Sleep(2 * time.Millisecond)
+		time.Sleep(time.Duration(workerPoolSleep) * time.Millisecond)
 	}
 
 	return returnValue
@@ -267,7 +278,7 @@ func (i iterRetry) WillSwitchPage(ctx context.Context) bool {
 	})
 	for !queryExecuted {
 		// small sleep time is required for cpu burn
-		time.Sleep(2 * time.Millisecond)
+		time.Sleep(time.Duration(workerPoolSleep) * time.Millisecond)
 	}
 
 	return returnValue
@@ -290,7 +301,7 @@ func (i iterRetry) PageState(ctx context.Context) []byte {
 	})
 	for !queryExecuted {
 		// small sleep time is required for cpu burn
-		time.Sleep(2 * time.Millisecond)
+		time.Sleep(time.Duration(workerPoolSleep) * time.Millisecond)
 	}
 
 	return returnValue
@@ -313,7 +324,7 @@ func (i iterRetry) MapScan(m map[string]interface{}, ctx context.Context) bool {
 	})
 	for !queryExecuted {
 		// small sleep time is required for cpu burn
-		time.Sleep(2 * time.Millisecond)
+		time.Sleep(time.Duration(workerPoolSleep) * time.Millisecond)
 	}
 
 	return returnValue
@@ -352,7 +363,7 @@ func (i iterRetry) SliceMapAndClose(ctx context.Context) ([]map[string]interface
 		})
 		for !queryExecuted {
 			// small sleep time is required for cpu burn
-			time.Sleep(2 * time.Millisecond)
+			time.Sleep(time.Duration(workerPoolSleep) * time.Millisecond)
 		}
 
 		// we will try to run the method several times until attempts is met
