@@ -185,6 +185,7 @@ func (i iterRetry) Scan(ctx context.Context, dest ...interface{}) bool {
 
 	log.Debug(impulseCtx, "running iterRetry Scan() method")
 
+	log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %v`messageToGrep: before exec", "", time.Now().Unix(), i.goCqlIter.Columns())
 	return i.goCqlIter.Scan(dest...)
 }
 
@@ -281,7 +282,12 @@ func (i iterRetry) Close(ctx context.Context) error {
 
 	log.Debug(impulseCtx, "running iterRetry Close() method")
 
-	return i.goCqlIter.Close()
+	err := i.goCqlIter.Close()
+	if err != nil {
+		log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %s`messageToGrep: error - %v", "", time.Now().Unix(), i.goCqlIter.Columns(), err)
+	}
+
+	return err
 }
 
 // ScanAndClose is a wrapper to retry around the gocql Scan() and Close().
@@ -311,6 +317,56 @@ func (i iterRetry) ScanAndClose(ctx context.Context, handle func() bool, dest ..
 			if !handle() {
 				break
 			}
+		}
+
+		// we will try to run the method several times until attempts is met
+		if err = i.goCqlIter.Close(); err != nil {
+			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %s`messageToGrep: error - %v", queryUUID, time.Now().Unix(), i.goCqlIter.Columns(), err)
+			log.Warnf(impulseCtx, "error when running Close(): %v, attempt: %d / %d", err, attempts, retries)
+
+			// incremental sleep
+			secondsToSleep += cassandraSecondsToSleepIncrement
+
+			log.Warnf(impulseCtx, "sleeping for %d second", secondsToSleep)
+
+			time.Sleep(time.Duration(secondsToSleep) * time.Second)
+		} else {
+			// in case the error is nil, we stop and return
+			return err
+		}
+
+		attempts++
+	}
+
+	return err
+}
+
+// todo test this function
+// MapScanAndClose is a wrapper to retry around the gocql MapScan() and Close().
+// We have a retry approach in place + incremental approach used. For example:
+// First time it will wait 1 second, second time 2 seconds, ... It will depend on the values for retries
+// and seconds to wait.
+func (i iterRetry) MapScanAndClose(m map[string]interface{}, handle func(), ctx context.Context) error {
+	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
+	if !ok {
+		log.Error(impulseCtx, "ImpulseCtx isn't correct type")
+		return impulse_ctx.NewInvalidImpulseCtx("ImpulseCtx isn't correct type")
+	}
+
+	retries := cassandraRetryAttempts
+	secondsToSleep := 0
+
+	var err error
+
+	attempts := 1
+	for attempts <= retries {
+
+		// Scan consumes the next row of the iterator and copies the columns of the
+		// current row into the values pointed at by dest.
+		queryUUID := uuid.New().String()
+		log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %v`messageToGrep: before exec", queryUUID, time.Now().Unix(), i.goCqlIter.Columns())
+		for i.goCqlIter.MapScan(m) {
+			handle()
 		}
 
 		// we will try to run the method several times until attempts is met
