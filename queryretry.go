@@ -3,7 +3,6 @@ package cassandra
 import (
 	"context"
 	"github.com/gocql/gocql"
-	"github.com/google/uuid"
 	impulse_ctx "github.com/motiv-labs/impulse-ctx"
 	log "github.com/motiv-labs/logwrapper"
 	"github.com/motiv-labs/workerpool"
@@ -107,28 +106,14 @@ func (q queryRetry) Exec(ctx context.Context) error {
 	attempts := 1
 	for attempts <= retryAttempts {
 		//we will try to run the method several times until attempts is met
-		queryUUID := uuid.New().String()
-
-		startTime := time.Now().UnixNano()
 		queryExecuted := make(chan bool)
 		workerPool.Submit(ctx, func() {
-			startTime = time.Now().UnixNano()
 			err = q.goCqlQuery.Exec()
-			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`startTime: %d`query: %s`messageToGrep: before exec", queryUUID, time.Now().UnixNano(), startTime, q.goCqlQuery.Statement())
 			queryExecuted <- true
 		})
 		<-queryExecuted
-		//for {
-		//	select {
-		//	case <-queryExecuted:
-		//
-		//	}
-		//	// small sleep time is required for cpu burn
-		//	time.Sleep(time.Duration(workerPoolSleep) * time.Millisecond)
-		//}
 
 		if err != nil {
-			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`startTime: %d`query: %s`messageToGrep: error - %v", queryUUID, time.Now().UnixNano(), startTime, q.goCqlQuery.Statement(), err)
 			log.Warnf(impulseCtx, "error when running Exec(): %v, attempt: %d / %d", err, attempts, retryAttempts)
 
 			// incremental sleep
@@ -167,28 +152,14 @@ func (q queryRetry) Scan(ctx context.Context, dest ...interface{}) error {
 	attempts := 1
 	for attempts <= retries {
 		//we will try to run the method several times until attempts is met
-		queryUUID := uuid.New().String()
-		startTime := time.Now().UnixNano()
-
 		queryExecuted := make(chan bool)
 		workerPool.Submit(ctx, func() {
-			startTime = time.Now().UnixNano()
 			err = q.goCqlQuery.Scan(dest...)
-			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`startTime %d`query: %s`messageToGrep: before exec", queryUUID, time.Now().UnixNano(), startTime, q.goCqlQuery.Statement())
 			queryExecuted <- true
 		})
 		<-queryExecuted
-		//for {
-		//	select {
-		//	case <-queryExecuted:
-		//
-		//	}
-		//	// small sleep time is required for cpu burn
-		//	time.Sleep(time.Duration(workerPoolSleep) * time.Millisecond)
-		//}
 
 		if err != nil {
-			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`startTime %d`query: %s`messageToGrep: error - %v", queryUUID, time.Now().UnixNano(), startTime, q.goCqlQuery.Statement(), err)
 			log.Warnf(impulseCtx, "error when running Scan(): %v, attempt: %d / %d", err, attempts, retries)
 
 			// incremental sleep
@@ -254,24 +225,13 @@ func (i iterRetry) Scan(ctx context.Context, dest ...interface{}) bool {
 
 	log.Debug(impulseCtx, "running iterRetry Scan() method")
 
-	startTime := time.Now().UnixNano()
 	queryExecuted := make(chan bool)
 	var returnValue bool
 	workerPool.Submit(ctx, func() {
-		startTime = time.Now().UnixNano()
 		returnValue = i.goCqlIter.Scan(dest...)
-		log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`startTime: %d`query: %v`messageToGrep: before exec", "", time.Now().UnixNano(), startTime, i.goCqlIter.Columns())
 		queryExecuted <- true
 	})
 	<-queryExecuted
-	//for {
-	//	select {
-	//	case <-queryExecuted:
-	//
-	//	}
-	//	// small sleep time is required for cpu burn
-	//	time.Sleep(time.Duration(workerPoolSleep) * time.Millisecond)
-	//}
 
 	return returnValue
 }
@@ -292,14 +252,6 @@ func (i iterRetry) WillSwitchPage(ctx context.Context) bool {
 		queryExecuted <- true
 	})
 	<-queryExecuted
-	//for {
-	//	select {
-	//	case <-queryExecuted:
-	//
-	//	}
-	//	// small sleep time is required for cpu burn
-	//	time.Sleep(time.Duration(workerPoolSleep) * time.Millisecond)
-	//}
 
 	return returnValue
 }
@@ -320,14 +272,6 @@ func (i iterRetry) PageState(ctx context.Context) []byte {
 		queryExecuted <- true
 	})
 	<-queryExecuted
-	//for {
-	//	select {
-	//	case <-queryExecuted:
-	//
-	//	}
-	//	// small sleep time is required for cpu burn
-	//	time.Sleep(time.Duration(workerPoolSleep) * time.Millisecond)
-	//}
 
 	return returnValue
 }
@@ -348,14 +292,6 @@ func (i iterRetry) MapScan(m map[string]interface{}, ctx context.Context) bool {
 		queryExecuted <- true
 	})
 	<-queryExecuted
-	//for {
-	//	select {
-	//	case <-queryExecuted:
-	//
-	//	}
-	//	// small sleep time is required for cpu burn
-	//	time.Sleep(time.Duration(workerPoolSleep) * time.Millisecond)
-	//}
 
 	return returnValue
 }
@@ -381,29 +317,15 @@ func (i iterRetry) SliceMapAndClose(ctx context.Context) ([]map[string]interface
 
 		// Scan consumes the next row of the iterator and copies the columns of the
 		// current row into the values pointed at by dest.
-		queryUUID := uuid.New().String()
-		startTime := time.Now().UnixNano()
-
 		queryExecuted := make(chan bool)
 		workerPool.Submit(ctx, func() {
-			startTime = time.Now().UnixNano()
 			sliceMap, err = i.goCqlIter.SliceMap()
-			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`startTime: %d`query: %v`messageToGrep: before exec", queryUUID, time.Now().UnixNano(), startTime, i.goCqlIter.Columns())
 			queryExecuted <- true
 		})
 		<-queryExecuted
-		//for {
-		//	select {
-		//	case <-queryExecuted:
-		//
-		//	}
-		//	// small sleep time is required for cpu burn
-		//	time.Sleep(time.Duration(workerPoolSleep) * time.Millisecond)
-		//}
 
 		// we will try to run the method several times until attempts is met
 		if err = i.goCqlIter.Close(); err != nil {
-			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`startTime: %d`query: %s`messageToGrep: error - %v", queryUUID, time.Now().UnixNano(), startTime, i.goCqlIter.Columns(), err)
 			log.Warnf(impulseCtx, "error when running Close(): %v, attempt: %d / %d", err, attempts, retries)
 
 			// incremental sleep
@@ -463,11 +385,7 @@ func (i iterRetry) ScanAndClose(ctx context.Context, handle func() bool, dest ..
 
 		// Scan consumes the next row of the iterator and copies the columns of the
 		// current row into the values pointed at by dest.
-		queryUUID := uuid.New().String()
-		startTime := time.Now().UnixNano()
-		//log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %v`messageToGrep: before exec", queryUUID, time.Now().UnixNano(), i.goCqlIter.Columns())
 		for i.Scan(ctx, dest...) {
-			startTime = time.Now().UnixNano()
 			if !handle() {
 				break
 			}
@@ -475,7 +393,6 @@ func (i iterRetry) ScanAndClose(ctx context.Context, handle func() bool, dest ..
 
 		// we will try to run the method several times until attempts is met
 		if err = i.goCqlIter.Close(); err != nil {
-			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`approxStartTime: %d`query: %s`messageToGrep: error - %v", queryUUID, time.Now().UnixNano(), startTime, i.goCqlIter.Columns(), err)
 			log.Warnf(impulseCtx, "error when running Close(): %v, attempt: %d / %d", err, attempts, retries)
 
 			// incremental sleep
@@ -517,17 +434,12 @@ func (i iterRetry) MapScanAndClose(m map[string]interface{}, handle func(), ctx 
 
 		// Scan consumes the next row of the iterator and copies the columns of the
 		// current row into the values pointed at by dest.
-		queryUUID := uuid.New().String()
-		startTime := time.Now().UnixNano()
-		//log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`query: %v`messageToGrep: before exec", queryUUID, time.Now().UnixNano(), i.goCqlIter.Columns())
 		for i.MapScan(m, ctx) {
-			startTime = time.Now().UnixNano()
 			handle()
 		}
 
 		// we will try to run the method several times until attempts is met
 		if err = i.goCqlIter.Close(); err != nil {
-			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`approxStartTime: %d`query: %s`messageToGrep: error - %v", queryUUID, time.Now().UnixNano(), startTime, i.goCqlIter.Columns(), err)
 			log.Warnf(impulseCtx, "error when running Close(): %v, attempt: %d / %d", err, attempts, retries)
 
 			// incremental sleep
