@@ -110,17 +110,22 @@ func (q queryRetry) Exec(ctx context.Context) error {
 		queryUUID := uuid.New().String()
 
 		startTime := time.Now().UnixNano()
-		queryExecuted := false
+		queryExecuted := make(chan bool)
 		workerPool.Submit(ctx, func() {
 			startTime = time.Now().UnixNano()
 			err = q.goCqlQuery.Exec()
 			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`startTime: %d`query: %s`messageToGrep: before exec", queryUUID, time.Now().UnixNano(), startTime, q.goCqlQuery.Statement())
-			queryExecuted = true
+			queryExecuted <- true
 		})
-		for !queryExecuted {
-			// small sleep time is required for cpu burn
-			time.Sleep(time.Duration(workerPoolSleep) * time.Millisecond)
-		}
+		<-queryExecuted
+		//for {
+		//	select {
+		//	case <-queryExecuted:
+		//
+		//	}
+		//	// small sleep time is required for cpu burn
+		//	time.Sleep(time.Duration(workerPoolSleep) * time.Millisecond)
+		//}
 
 		if err != nil {
 			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`startTime: %d`query: %s`messageToGrep: error - %v", queryUUID, time.Now().UnixNano(), startTime, q.goCqlQuery.Statement(), err)
@@ -165,17 +170,22 @@ func (q queryRetry) Scan(ctx context.Context, dest ...interface{}) error {
 		queryUUID := uuid.New().String()
 		startTime := time.Now().UnixNano()
 
-		queryExecuted := false
+		queryExecuted := make(chan bool)
 		workerPool.Submit(ctx, func() {
 			startTime = time.Now().UnixNano()
 			err = q.goCqlQuery.Scan(dest...)
 			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`startTime %d`query: %s`messageToGrep: before exec", queryUUID, time.Now().UnixNano(), startTime, q.goCqlQuery.Statement())
-			queryExecuted = true
+			queryExecuted <- true
 		})
-		for !queryExecuted {
-			// small sleep time is required for cpu burn
-			time.Sleep(time.Duration(workerPoolSleep) * time.Millisecond)
-		}
+		<-queryExecuted
+		//for {
+		//	select {
+		//	case <-queryExecuted:
+		//
+		//	}
+		//	// small sleep time is required for cpu burn
+		//	time.Sleep(time.Duration(workerPoolSleep) * time.Millisecond)
+		//}
 
 		if err != nil {
 			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`startTime %d`query: %s`messageToGrep: error - %v", queryUUID, time.Now().UnixNano(), startTime, q.goCqlQuery.Statement(), err)
@@ -245,18 +255,23 @@ func (i iterRetry) Scan(ctx context.Context, dest ...interface{}) bool {
 	log.Debug(impulseCtx, "running iterRetry Scan() method")
 
 	startTime := time.Now().UnixNano()
-	queryExecuted := false
+	queryExecuted := make(chan bool)
 	var returnValue bool
 	workerPool.Submit(ctx, func() {
 		startTime = time.Now().UnixNano()
 		returnValue = i.goCqlIter.Scan(dest...)
 		log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`startTime: %d`query: %v`messageToGrep: before exec", "", time.Now().UnixNano(), startTime, i.goCqlIter.Columns())
-		queryExecuted = true
+		queryExecuted <- true
 	})
-	for !queryExecuted {
-		// small sleep time is required for cpu burn
-		time.Sleep(time.Duration(workerPoolSleep) * time.Millisecond)
-	}
+	<-queryExecuted
+	//for {
+	//	select {
+	//	case <-queryExecuted:
+	//
+	//	}
+	//	// small sleep time is required for cpu burn
+	//	time.Sleep(time.Duration(workerPoolSleep) * time.Millisecond)
+	//}
 
 	return returnValue
 }
@@ -270,16 +285,21 @@ func (i iterRetry) WillSwitchPage(ctx context.Context) bool {
 
 	log.Debug(impulseCtx, "running iterRetry Close() method")
 
-	queryExecuted := false
+	queryExecuted := make(chan bool)
 	var returnValue bool
 	workerPool.Submit(ctx, func() {
 		returnValue = i.goCqlIter.WillSwitchPage()
-		queryExecuted = true
+		queryExecuted <- true
 	})
-	for !queryExecuted {
-		// small sleep time is required for cpu burn
-		time.Sleep(time.Duration(workerPoolSleep) * time.Millisecond)
-	}
+	<-queryExecuted
+	//for {
+	//	select {
+	//	case <-queryExecuted:
+	//
+	//	}
+	//	// small sleep time is required for cpu burn
+	//	time.Sleep(time.Duration(workerPoolSleep) * time.Millisecond)
+	//}
 
 	return returnValue
 }
@@ -293,16 +313,21 @@ func (i iterRetry) PageState(ctx context.Context) []byte {
 
 	log.Debug(impulseCtx, "running iterRetry PageState() method")
 
-	queryExecuted := false
+	queryExecuted := make(chan bool)
 	var returnValue []byte
 	workerPool.Submit(ctx, func() {
 		returnValue = i.goCqlIter.PageState()
-		queryExecuted = true
+		queryExecuted <- true
 	})
-	for !queryExecuted {
-		// small sleep time is required for cpu burn
-		time.Sleep(time.Duration(workerPoolSleep) * time.Millisecond)
-	}
+	<-queryExecuted
+	//for {
+	//	select {
+	//	case <-queryExecuted:
+	//
+	//	}
+	//	// small sleep time is required for cpu burn
+	//	time.Sleep(time.Duration(workerPoolSleep) * time.Millisecond)
+	//}
 
 	return returnValue
 }
@@ -316,16 +341,21 @@ func (i iterRetry) MapScan(m map[string]interface{}, ctx context.Context) bool {
 
 	log.Debug(impulseCtx, "running iterRetry PageState() method")
 
-	queryExecuted := false
+	queryExecuted := make(chan bool)
 	var returnValue bool
 	workerPool.Submit(ctx, func() {
 		returnValue = i.goCqlIter.MapScan(m)
-		queryExecuted = true
+		queryExecuted <- true
 	})
-	for !queryExecuted {
-		// small sleep time is required for cpu burn
-		time.Sleep(time.Duration(workerPoolSleep) * time.Millisecond)
-	}
+	<-queryExecuted
+	//for {
+	//	select {
+	//	case <-queryExecuted:
+	//
+	//	}
+	//	// small sleep time is required for cpu burn
+	//	time.Sleep(time.Duration(workerPoolSleep) * time.Millisecond)
+	//}
 
 	return returnValue
 }
@@ -354,17 +384,22 @@ func (i iterRetry) SliceMapAndClose(ctx context.Context) ([]map[string]interface
 		queryUUID := uuid.New().String()
 		startTime := time.Now().UnixNano()
 
-		queryExecuted := false
+		queryExecuted := make(chan bool)
 		workerPool.Submit(ctx, func() {
 			startTime = time.Now().UnixNano()
 			sliceMap, err = i.goCqlIter.SliceMap()
 			log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`startTime: %d`query: %v`messageToGrep: before exec", queryUUID, time.Now().UnixNano(), startTime, i.goCqlIter.Columns())
-			queryExecuted = true
+			queryExecuted <- true
 		})
-		for !queryExecuted {
-			// small sleep time is required for cpu burn
-			time.Sleep(time.Duration(workerPoolSleep) * time.Millisecond)
-		}
+		<-queryExecuted
+		//for {
+		//	select {
+		//	case <-queryExecuted:
+		//
+		//	}
+		//	// small sleep time is required for cpu burn
+		//	time.Sleep(time.Duration(workerPoolSleep) * time.Millisecond)
+		//}
 
 		// we will try to run the method several times until attempts is met
 		if err = i.goCqlIter.Close(); err != nil {
