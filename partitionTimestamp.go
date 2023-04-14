@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gocql/gocql"
+	"github.com/google/uuid"
 	"github.com/mitchellh/mapstructure"
 	impulse_ctx "github.com/motiv-labs/impulse-ctx"
 	log "github.com/motiv-labs/logwrapper"
@@ -114,9 +115,11 @@ func (t timestamp) PartitionTimestampQuery(ctx context.Context, table, where, ti
 	var recordList []map[string]interface{}
 	startTime := start
 
+	queryuuid := uuid.New().String()
+	log.Infof(impulseCtx, "queryuuid: %s - performing query call", queryuuid)
 	for (len(recordList) < limit || limit < 0) && startTime.Before(end) {
 		innerLimit := limit - len(recordList)
-		innerRecordList, err := t.performQuery(ctx, table, where, timeRangeColumn, timeRangeIsUUID, startTime, end, innerLimit)
+		innerRecordList, err := t.performQuery(ctx, table, where, timeRangeColumn, timeRangeIsUUID, startTime, end, innerLimit, queryuuid)
 		if err != nil {
 			log.Errorf(impulseCtx, "error performing query %v", err)
 			return recordList, err
@@ -132,7 +135,7 @@ func (t timestamp) PartitionTimestampQuery(ctx context.Context, table, where, ti
 	return recordList, nil
 }
 
-func (t timestamp) performQuery(ctx context.Context, table, where, timeRangeColumn string, timeRangeIsUUID bool, start, end time.Time, limit int) ([]map[string]interface{}, error) {
+func (t timestamp) performQuery(ctx context.Context, table, where, timeRangeColumn string, timeRangeIsUUID bool, start, end time.Time, limit int, queryuuid string) ([]map[string]interface{}, error) {
 	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 	if !ok {
 		log.Warnf(impulseCtx, "ImpulseCtx isn't correct type")
@@ -157,7 +160,7 @@ func (t timestamp) performQuery(ctx context.Context, table, where, timeRangeColu
 
 		var innerRecordList []map[string]interface{}
 		var err error
-
+		log.Infof(impulseCtx, "queryuuid: %s - calling slice map", queryuuid)
 		innerRecordList, err = iter.SliceMapAndClose(ctx)
 
 		if err != nil {
