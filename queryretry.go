@@ -5,6 +5,7 @@ import (
 	"github.com/gocql/gocql"
 	impulse_ctx "github.com/motiv-labs/impulse-ctx"
 	log "github.com/motiv-labs/logwrapper"
+	"github.com/motiv-labs/workerpool"
 	"strconv"
 	"time"
 )
@@ -12,13 +13,33 @@ import (
 const (
 	defaultCassandraRetryAttempts           = "3"
 	defaultCassandraSecondsToSleepIncrement = "1"
+	defaultWorkerPoolSize                   = "50"
 
 	envCassandraAttempts                = "CASSANDRA_RETRY_ATTEMPTS"
 	envCassandraSecondsToSleepIncrement = "CASSANDRA_SECONDS_SLEEP_INCREMENT"
+	envWorkerPoolSize                   = "CASSANDRA_WORKER_POOL_SIZE"
 )
 
 var cassandraRetryAttempts = 3
 var cassandraSecondsToSleepIncrement = 1
+var workerPoolSize = 50
+
+// default to 50
+// allow each service to set the workerpool size individually
+var workerPool *workerpool.WorkerPool
+
+func initWorkerPool() {
+	ictx := impulse_ctx.ImpulseCtx{}
+	ctx := impulse_ctx.NewContext(context.Background(), "", nil, "")
+	eWorkerPoolSize, err := strconv.Atoi(getenv(envWorkerPoolSize, defaultWorkerPoolSize, ictx))
+	if err != nil {
+		log.Errorf(ictx, "error trying to get %s value: %s",
+			envWorkerPoolSize, getenv(envWorkerPoolSize, defaultWorkerPoolSize, ictx))
+		eWorkerPoolSize = workerPoolSize
+	}
+
+	workerPool = workerpool.NewWorkerPool(ctx, eWorkerPoolSize)
+}
 
 // Package level initialization.
 //
@@ -38,6 +59,8 @@ func init() {
 			getenv(envCassandraSecondsToSleepIncrement, defaultCassandraSecondsToSleepIncrement, ictx))
 		cassandraSecondsToSleepIncrement = 1
 	}
+
+	initWorkerPool()
 
 	log.Debugf(ictx, "got cassandraRetryAttempts: %d", cassandraRetryAttempts)
 	log.Debugf(ictx, "got cassandraSecondsToSleepIncrement: %d", cassandraSecondsToSleep)
@@ -71,7 +94,13 @@ func (q queryRetry) Exec(ctx context.Context) error {
 	attempts := 1
 	for attempts <= retryAttempts {
 		//we will try to run the method several times until attempts is met
-		err = q.goCqlQuery.Exec()
+		queryExecuted := make(chan bool)
+		workerPool.Submit(ctx, func() {
+			err = q.goCqlQuery.Exec()
+			queryExecuted <- true
+		})
+		<-queryExecuted
+
 		if err != nil {
 			log.Warnf(impulseCtx, "error when running Exec(): %v, attempt: %d / %d", err, attempts, retryAttempts)
 
@@ -111,7 +140,13 @@ func (q queryRetry) Scan(ctx context.Context, dest ...interface{}) error {
 	attempts := 1
 	for attempts <= retries {
 		//we will try to run the method several times until attempts is met
-		err = q.goCqlQuery.Scan(dest...)
+		queryExecuted := make(chan bool)
+		workerPool.Submit(ctx, func() {
+			err = q.goCqlQuery.Scan(dest...)
+			queryExecuted <- true
+		})
+		<-queryExecuted
+
 		if err != nil {
 			log.Warnf(impulseCtx, "error when running Scan(): %v, attempt: %d / %d", err, attempts, retries)
 
@@ -178,7 +213,15 @@ func (i iterRetry) Scan(ctx context.Context, dest ...interface{}) bool {
 
 	log.Debug(impulseCtx, "running iterRetry Scan() method")
 
-	return i.goCqlIter.Scan(dest...)
+	queryExecuted := make(chan bool)
+	var returnValue bool
+	workerPool.Submit(ctx, func() {
+		returnValue = i.goCqlIter.Scan(dest...)
+		queryExecuted <- true
+	})
+	<-queryExecuted
+
+	return returnValue
 }
 
 // WillSwitchPage is just a wrapper to be able to call this method
@@ -190,7 +233,15 @@ func (i iterRetry) WillSwitchPage(ctx context.Context) bool {
 
 	log.Debug(impulseCtx, "running iterRetry Close() method")
 
-	return i.goCqlIter.WillSwitchPage()
+	queryExecuted := make(chan bool)
+	var returnValue bool
+	workerPool.Submit(ctx, func() {
+		returnValue = i.goCqlIter.WillSwitchPage()
+		queryExecuted <- true
+	})
+	<-queryExecuted
+
+	return returnValue
 }
 
 // PageState is just a wrapper to be able to call this method
@@ -202,7 +253,15 @@ func (i iterRetry) PageState(ctx context.Context) []byte {
 
 	log.Debug(impulseCtx, "running iterRetry PageState() method")
 
-	return i.goCqlIter.PageState()
+	queryExecuted := make(chan bool)
+	var returnValue []byte
+	workerPool.Submit(ctx, func() {
+		returnValue = i.goCqlIter.PageState()
+		queryExecuted <- true
+	})
+	<-queryExecuted
+
+	return returnValue
 }
 
 // MapScan is just a wrapper to be able to call this method
@@ -214,7 +273,15 @@ func (i iterRetry) MapScan(m map[string]interface{}, ctx context.Context) bool {
 
 	log.Debug(impulseCtx, "running iterRetry PageState() method")
 
-	return i.goCqlIter.MapScan(m)
+	queryExecuted := make(chan bool)
+	var returnValue bool
+	workerPool.Submit(ctx, func() {
+		returnValue = i.goCqlIter.MapScan(m)
+		queryExecuted <- true
+	})
+	<-queryExecuted
+
+	return returnValue
 }
 
 /*
@@ -238,11 +305,15 @@ func (i iterRetry) SliceMapAndClose(ctx context.Context) ([]map[string]interface
 
 		// Scan consumes the next row of the iterator and copies the columns of the
 		// current row into the values pointed at by dest.
-		sliceMap, err = i.goCqlIter.SliceMap()
+		queryExecuted := make(chan bool)
+		workerPool.Submit(ctx, func() {
+			sliceMap, err = i.goCqlIter.SliceMap()
+			queryExecuted <- true
+		})
+		<-queryExecuted
 
 		// we will try to run the method several times until attempts is met
 		if err = i.goCqlIter.Close(); err != nil {
-
 			log.Warnf(impulseCtx, "error when running Close(): %v, attempt: %d / %d", err, attempts, retries)
 
 			// incremental sleep
@@ -272,7 +343,9 @@ func (i iterRetry) Close(ctx context.Context) error {
 
 	log.Debug(impulseCtx, "running iterRetry Close() method")
 
-	return i.goCqlIter.Close()
+	err := i.goCqlIter.Close()
+
+	return err
 }
 
 // ScanAndClose is a wrapper to retry around the gocql Scan() and Close().
@@ -296,7 +369,7 @@ func (i iterRetry) ScanAndClose(ctx context.Context, handle func() bool, dest ..
 
 		// Scan consumes the next row of the iterator and copies the columns of the
 		// current row into the values pointed at by dest.
-		for i.goCqlIter.Scan(dest...) {
+		for i.Scan(ctx, dest...) {
 			if !handle() {
 				break
 			}
@@ -304,7 +377,53 @@ func (i iterRetry) ScanAndClose(ctx context.Context, handle func() bool, dest ..
 
 		// we will try to run the method several times until attempts is met
 		if err = i.goCqlIter.Close(); err != nil {
+			log.Warnf(impulseCtx, "error when running Close(): %v, attempt: %d / %d", err, attempts, retries)
 
+			// incremental sleep
+			secondsToSleep += cassandraSecondsToSleepIncrement
+
+			log.Warnf(impulseCtx, "sleeping for %d second", secondsToSleep)
+
+			time.Sleep(time.Duration(secondsToSleep) * time.Second)
+		} else {
+			// in case the error is nil, we stop and return
+			return err
+		}
+
+		attempts++
+	}
+
+	return err
+}
+
+// todo test this function
+// MapScanAndClose is a wrapper to retry around the gocql MapScan() and Close().
+// We have a retry approach in place + incremental approach used. For example:
+// First time it will wait 1 second, second time 2 seconds, ... It will depend on the values for retries
+// and seconds to wait.
+func (i iterRetry) MapScanAndClose(m map[string]interface{}, handle func(), ctx context.Context) error {
+	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
+	if !ok {
+		log.Error(impulseCtx, "ImpulseCtx isn't correct type")
+		return impulse_ctx.NewInvalidImpulseCtx("ImpulseCtx isn't correct type")
+	}
+
+	retries := cassandraRetryAttempts
+	secondsToSleep := 0
+
+	var err error
+
+	attempts := 1
+	for attempts <= retries {
+
+		// Scan consumes the next row of the iterator and copies the columns of the
+		// current row into the values pointed at by dest.
+		for i.MapScan(m, ctx) {
+			handle()
+		}
+
+		// we will try to run the method several times until attempts is met
+		if err = i.goCqlIter.Close(); err != nil {
 			log.Warnf(impulseCtx, "error when running Close(): %v, attempt: %d / %d", err, attempts, retries)
 
 			// incremental sleep

@@ -17,6 +17,8 @@ const (
 	inClauseLimit = 300
 )
 
+// todo do we need worker pooling here as well?
+
 type Timestamp interface {
 	CreatePartitionTimestampValue() int64
 	CreatePartitionTimestampValueFromTime(timestamp time.Time) int64
