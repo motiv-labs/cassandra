@@ -14,12 +14,10 @@ const (
 	defaultCassandraRetryAttempts           = "3"
 	defaultCassandraSecondsToSleepIncrement = "1"
 	defaultWorkerPoolSize                   = "50"
-	defaultWorkerPoolSleep                  = "2"
 
 	envCassandraAttempts                = "CASSANDRA_RETRY_ATTEMPTS"
 	envCassandraSecondsToSleepIncrement = "CASSANDRA_SECONDS_SLEEP_INCREMENT"
 	envWorkerPoolSize                   = "CASSANDRA_WORKER_POOL_SIZE"
-	envWorkerPoolSleep                  = "CASSANDRA_WORKER_POOL_SLEEP"
 )
 
 var cassandraRetryAttempts = 3
