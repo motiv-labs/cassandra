@@ -25,9 +25,7 @@ const (
 var cassandraRetryAttempts = 3
 var cassandraSecondsToSleepIncrement = 1
 var workerPoolSize = 50
-var workerPoolSleep = 2
 
-//todo add worker pool
 // default to 50
 // allow each service to set the workerpool size individually
 var workerPool *workerpool.WorkerPool
@@ -41,14 +39,6 @@ func initWorkerPool() {
 			envWorkerPoolSize, getenv(envWorkerPoolSize, defaultWorkerPoolSize, ictx))
 		eWorkerPoolSize = workerPoolSize
 	}
-
-	eWorkerPoolSleep, err := strconv.Atoi(getenv(envWorkerPoolSleep, defaultWorkerPoolSleep, ictx))
-	if err != nil {
-		log.Errorf(ictx, "error trying to get %s value: %s",
-			envWorkerPoolSleep, getenv(envWorkerPoolSleep, defaultWorkerPoolSleep, ictx))
-		eWorkerPoolSize = workerPoolSleep
-	}
-	workerPoolSleep = eWorkerPoolSleep
 
 	workerPool = workerpool.NewWorkerPool(ctx, eWorkerPoolSize)
 }
