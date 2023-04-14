@@ -343,11 +343,7 @@ func (i iterRetry) Close(ctx context.Context) error {
 
 	log.Debug(impulseCtx, "running iterRetry Close() method")
 
-	startTime := time.Now().UnixNano()
 	err := i.goCqlIter.Close()
-	if err != nil {
-		log.Infof(impulseCtx, "queryUUID: %s`timestamp: %d`startTime: %d`query: %s`messageToGrep: error - %v", "", time.Now().UnixNano(), startTime, i.goCqlIter.Columns(), err)
-	}
 
 	return err
 }
