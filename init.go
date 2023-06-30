@@ -100,6 +100,7 @@ func New(keyspace string, ctx context.Context) Initializer {
 // NOTE: Needs to be called only once on the app startup, won't fail if it is called multiple times but is not necessary.
 //
 // Params:
+//
 //	clusterHostName: Cassandra cluster host
 //	systemKeyspace: System keyspace
 //	appKeyspace: Application keyspace
@@ -141,7 +142,7 @@ func (i sessionInitializer) NewSession(ctx context.Context) (Holder, error) {
 
 	session, err := newKeyspaceSession(i.clusterHostName, i.keyspace,
 		i.clusterHostUsername, i.clusterHostPassword, i.clusterHostSSLCert, i.consistency,
-		600*time.Millisecond, ctx)
+		6000*time.Millisecond, ctx)
 	if err != nil {
 		log.Errorf(impulseCtx, "error starting Cassandra session for the cluster hostname: %s and keyspace: %s - %v",
 			i.clusterHostName, i.keyspace, err)
@@ -362,9 +363,10 @@ func getKeyspaceNameFromUseStmt(stmt string, ctx context.Context) (string, bool)
 // Loop is a loop that tries to get a connection until a timeout is reached
 //
 // Params:
-//	 timeout: timeout to get the connection
-//	 initializer : initializer to start the session
-//	 connectionHost : name of host for the connection
+//
+//	timeout: timeout to get the connection
+//	initializer : initializer to start the session
+//	connectionHost : name of host for the connection
 //
 // Returns a session Holder to store the session, or an error if the timeout was reached
 func loop(timeout time.Duration, initializer Initializer, connectionHost string, ctx context.Context) (Holder, error) {
@@ -401,8 +403,9 @@ func loop(timeout time.Duration, initializer Initializer, connectionHost string,
 // or return the given default value if the environment variable is not set
 //
 // Params:
-//  envVariable : environment variable
-//  defaultValue : value to return if environment variable is not set
+//
+//	envVariable : environment variable
+//	defaultValue : value to return if environment variable is not set
 //
 // Returns the string value for the specified variable
 func getenv(envVariable string, defaultValue string, ictx impulse_ctx.ImpulseCtx) string {
@@ -423,8 +426,9 @@ func getenv(envVariable string, defaultValue string, ictx impulse_ctx.ImpulseCtx
 // or return the given default value if the environment variable is not set
 //
 // Params:
-//  envVariable : environment variable
-//  defaultValue : value to return if environment variable is not set
+//
+//	envVariable : environment variable
+//	defaultValue : value to return if environment variable is not set
 //
 // Returns the string value for the specified variable
 func getenvnolog(envVariable string, defaultValue string, ictx impulse_ctx.ImpulseCtx) string {
