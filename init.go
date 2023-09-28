@@ -142,7 +142,7 @@ func (i sessionInitializer) NewSession(ctx context.Context) (Holder, error) {
 
 	session, err := newKeyspaceSession(i.clusterHostName, i.keyspace,
 		i.clusterHostUsername, i.clusterHostPassword, i.clusterHostSSLCert, i.consistency,
-		11*time.Second, ctx)
+		60*time.Second, ctx)
 	if err != nil {
 		log.Errorf(impulseCtx, "error starting Cassandra session for the cluster hostname: %s and keyspace: %s - %v",
 			i.clusterHostName, i.keyspace, err)
