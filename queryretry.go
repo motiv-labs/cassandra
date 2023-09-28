@@ -94,15 +94,15 @@ func (q queryRetry) Exec(ctx context.Context) error {
 	attempts := 1
 	for attempts <= retryAttempts {
 		//we will try to run the method several times until attempts is met
-		queryExecuted := make(chan bool)
+		queryExecuted := make(chan error)
 		workerPool.Submit(ctx, func() {
 			err = q.goCqlQuery.Exec()
-			queryExecuted <- true
+			queryExecuted <- err
 		})
-		<-queryExecuted
+		err = <-queryExecuted
 
 		if err != nil {
-			log.Warnf(impulseCtx, "error when running Exec(): %v, attempt: %d / %d", err, attempts, retryAttempts)
+			log.Warnf(impulseCtx, "error when running Exec(): %v, attempt: %d / %d, query: %s", err, attempts, retryAttempts, q.goCqlQuery.String())
 
 			// incremental sleep
 			secondsToSleep = secondsToSleep + cassandraSecondsToSleepIncrement
@@ -204,7 +204,6 @@ func (q queryRetry) PageSize(n int, ctx context.Context) QueryInterface {
 	return queryRetry{goCqlQuery: q.goCqlQuery.PageSize(n)}
 }
 
-//
 func (i iterRetry) Scan(ctx context.Context, dest ...interface{}) bool {
 	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 	if !ok {
