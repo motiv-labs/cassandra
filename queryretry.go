@@ -421,6 +421,8 @@ func (i iterRetry) MapScanAndClose(m map[string]interface{}, handle func() bool,
 			if !handle() {
 				break
 			}
+			// need to reset m otherwise MapScan errors
+			m = map[string]interface{}{}
 		}
 
 		// we will try to run the method several times until attempts is met
