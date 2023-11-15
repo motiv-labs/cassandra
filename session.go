@@ -34,7 +34,7 @@ type IterInterface interface {
 	WillSwitchPage(ctx context.Context) bool
 	PageState(ctx context.Context) []byte
 	MapScan(m map[string]interface{}, ctx context.Context) bool
-	MapScanAndClose(m map[string]interface{}, handle func() bool, ctx context.Context) error
+	MapScanAndClose(m *map[string]interface{}, handle func() bool, ctx context.Context) error
 	Close(ctx context.Context) error
 	ScanAndClose(ctx context.Context, handle func() bool, dest ...interface{}) error
 	SliceMapAndClose(ctx context.Context) ([]map[string]interface{}, error)

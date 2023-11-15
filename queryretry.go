@@ -400,7 +400,7 @@ func (i iterRetry) ScanAndClose(ctx context.Context, handle func() bool, dest ..
 // We have a retry approach in place + incremental approach used. For example:
 // First time it will wait 1 second, second time 2 seconds, ... It will depend on the values for retries
 // and seconds to wait.
-func (i iterRetry) MapScanAndClose(m map[string]interface{}, handle func() bool, ctx context.Context) error {
+func (i iterRetry) MapScanAndClose(m *map[string]interface{}, handle func() bool, ctx context.Context) error {
 	impulseCtx, ok := ctx.Value(impulse_ctx.ImpulseCtxKey).(impulse_ctx.ImpulseCtx)
 	if !ok {
 		log.Error(impulseCtx, "ImpulseCtx isn't correct type")
@@ -417,12 +417,12 @@ func (i iterRetry) MapScanAndClose(m map[string]interface{}, handle func() bool,
 
 		// Scan consumes the next row of the iterator and copies the columns of the
 		// current row into the values pointed at by dest.
-		for i.MapScan(m, ctx) {
+		for i.MapScan(*m, ctx) {
 			if !handle() {
 				break
 			}
 			// need to reset m otherwise MapScan errors
-			m = map[string]interface{}{}
+			m = &map[string]interface{}{}
 		}
 
 		// we will try to run the method several times until attempts is met
