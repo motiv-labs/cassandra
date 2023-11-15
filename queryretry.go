@@ -396,6 +396,7 @@ func (i iterRetry) ScanAndClose(ctx context.Context, handle func() bool, dest ..
 }
 
 // todo test this function
+// todo solve m not updating for the outer function who calls this one.
 // MapScanAndClose is a wrapper to retry around the gocql MapScan() and Close().
 // We have a retry approach in place + incremental approach used. For example:
 // First time it will wait 1 second, second time 2 seconds, ... It will depend on the values for retries
